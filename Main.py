@@ -87,19 +87,19 @@ def print_system_info(strategy=None):
 
             gpus = tf.config.experimental.list_physical_devices('GPU')
             print("System Information:"
-                  f"  - Platform: {platform.system()}"
-                  f"  - Platform Release: {platform.release()}"
-                  f"  - Platform Version: {platform.version()}"
-                  f"  - Architecture: {platform.machine()}"
-                  f"  - Hostname: {platform.node()}"
-                  f"  - CPUs: {os.cpu_count()}"
-                  f"  - CPU Model: {platform.processor()}"
-                  f"  - Total RAM: {round(os.sysconf('SC_PAGE_SIZE') * os.sysconf('SC_PHYS_PAGES') / (1024. ** 3))} GB")
+                  f"  - Platform: {platform.system()}\n"
+                  f"  - Platform Release: {platform.release()}\n"
+                  f"  - Platform Version: {platform.version()}\n"
+                  f"  - Architecture: {platform.machine()}\n"
+                  f"  - Hostname: {platform.node()}\n"
+                  f"  - CPUs: {os.cpu_count()}\n"
+                  f"  - CPU Model: {platform.processor()}\n"
+                  f"  - Total RAM: {round(os.sysconf('SC_PAGE_SIZE') * os.sysconf('SC_PHYS_PAGES') / (1024. ** 3))} GB\n")
 
             for gpu in gpus:
                 details = tf.config.experimental.get_device_details(gpu)
-                print(f"  - GPU {gpu.name}: {details['device_name']}")
-                print(f"    - Compute Capability: {details['compute_capability']}")
+                print(f"  - GPU {gpu.name}: {details['device_name']}\n")
+                print(f"    - Compute Capability: {details['compute_capability']}\n")
 
         except Exception as e:
             print(f"[ERROR] Error in getting system details: {e}")
