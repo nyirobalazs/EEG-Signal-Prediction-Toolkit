@@ -12,9 +12,12 @@ from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLRO
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 import numpy as np
 
+from Logger import Logger
+logger = Logger(__name__, code_file_name="MLEngine.py")
 
 def mean_accuracy_within_tolerance(y_true, y_pred):
     # Calculate the difference between the true and predicted values and check if the difference is within a tolerance
+    y_pred = tf.cast(y_pred, tf.float32)
     diff = tf.abs(y_true - y_pred)
     return tf.reduce_mean(tf.cast(tf.less(diff, 0.01), tf.float32))
 
@@ -57,7 +60,8 @@ class MLEngine:
                  initial_learning_rate=None,
                  decay_steps=None,
                  decay_rate=None,
-                 staircase=False):
+                 staircase=False,
+                 is_test_code=False):
         """
         Constructs all the necessary attributes for the MLEngine object.
 
@@ -88,6 +92,7 @@ class MLEngine:
             self.decay_rate = decay_rate
             self.staircase = staircase
             self.compile_model()
+            self.is_test_code = is_test_code
 
     def compile_model(self):
         """Compiles the model with the specified optimizer, loss function, and metrics."""
@@ -128,11 +133,12 @@ class MLEngine:
         """
 
         # Define the callbacks
-        print(f"   [INFO] Training the model with {model_type} model type.")
+        logger.info(f" Training the model with {model_type} model type.")
+
         early_stopping = EarlyStopping(monitor='val_loss', patience=3, verbose=1, mode='min', restore_best_weights=True)
         model_checkpoint = ModelCheckpoint(f'{save_path}/models/{model_name}.keras', monitor='val_loss',
                                            save_best_only=True)
-        reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=5, min_lr=0.000001)
+        reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=10, min_lr=0.001)
         csv_logger = CSVLogger(f'{save_path}/logs/{model_name}_training.log')
         tensorboard = TensorBoard(log_dir=f'{save_path}/logs/tensor_boards')
 
@@ -142,7 +148,8 @@ class MLEngine:
                                           epochs=epochs, validation_split=split_ratio,
                                           callbacks=[early_stopping, model_checkpoint, reduce_lr, csv_logger,
                                                      tensorboard],
-                                          verbose=1)
+                                          verbose=1 if self.is_test_code else 0,
+                                          shuffle=False)
 
     def calculate_errors(self, evalY, predicted_segments):
         """
@@ -222,13 +229,14 @@ class MLEngine:
         predicted_fitted = predicted_fitted.reshape(-1, 1)
         predicted_fitted = np.concatenate((np.zeros((input_size, 1)), predicted_fitted, np.zeros((step_size, 1))),
                                           axis=0).squeeze()
+        # predicted_fitted = np.pad(predicted_fitted, ((input_size, step_size), (0, 0)), 'constant', constant_values=0).squeeze()
 
         # Calculate the errors
         mae, rmse, r2 = self.calculate_errors(y_eval, predicted_segments)
 
         # create a dictionary with the evaluation results and predicted_fitted
         evaluation = {'mae': mae, 'rmse': rmse, 'r2': r2, 'predicted_fitted': predicted_fitted}
-        print(f"   [INFO] Evaluation results: MAE={mae}, RMSE={rmse}, R2={r2}. Predicted shape: {predicted_fitted.shape}")
+        logger.info(f" Evaluation results: MAE={mae}, RMSE={rmse}, R2={r2}. Predicted shape: {predicted_fitted.shape}")
         return evaluation
 
 

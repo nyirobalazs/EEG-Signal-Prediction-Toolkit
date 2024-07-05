@@ -1,6 +1,9 @@
 import os
 import scipy.io
 
+from Logger import Logger
+logger = Logger(__name__, code_file_name="Loader.py")
+
 
 class SourceFileLoader:
     """
@@ -50,9 +53,11 @@ class SourceFileLoader:
                     if file.endswith(file_extension):
                         self.file_paths.append(os.path.join(root, file))
             if not self.file_paths:
-                raise ValueError(f"[ERROR] No .mat files found in the directory: {directory}")
+                logger.error(f"[ValueError] No .mat files found in the directory: {directory}")
+                raise
         except Exception as e:
-            raise ValueError(f"[ERROR] Error in finding .mat files: {e}")
+            logger.error(f"[ValueError] Error in finding .mat files: {e}")
+            raise
 
     def find_file(self, directory, filename):
         """
@@ -76,7 +81,8 @@ class SourceFileLoader:
                     return os.path.join(root, filename)
             return None
         except Exception as e:
-            raise ValueError(f"[ERROR] Error in finding file: {e}")
+            logger.error(f"[ValueError] Error in finding file: {e}")
+            raise
 
     def load_mat_files(self):
         """
@@ -98,7 +104,8 @@ class SourceFileLoader:
                 }
                 self.source_file_directory.append(file_data)
             except Exception as e:
-                raise ValueError(f"[ERROR] Error in loading .mat files: {e}")
+                logger.error(f"[ValueError] Error in loading .mat files: {e}")
+                raise
 
     def get_source_file_directory(self):
         return self.source_file_directory
@@ -123,5 +130,5 @@ class SourceFileLoader:
             self.find_mat_files(directory, file_extension='.mat')
             self.load_mat_files()
 
-        print(f"   [INFO] File loading finished. In total {len(self.source_file_directory)} .{mode} type file found.")
+        logger.info(f"File loading finished. In total {len(self.source_file_directory)} .{mode} type file found.")
         return self.get_source_file_directory()

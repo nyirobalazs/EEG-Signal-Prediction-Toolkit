@@ -4,6 +4,10 @@ from TrainDataPrepare import TrainDataPrepare
 from Saver import Saver
 from tqdm import tqdm
 
+from Plot import Plot
+from Logger import Logger
+logger = Logger(__name__, code_file_name="Training.py")
+
 class Training:
     """
     The Training class is responsible for setting up and executing the training pipeline for a given model.
@@ -12,7 +16,6 @@ class Training:
         eventID_channel_ind (int): The index of the event ID channel.
         test_size (float): The proportion of the dataset to include in the test split.
         is_normalize (bool): Whether to normalize the data.
-        input_sequence_length (int): The length of the input sequences.
         mode (str): The mode of operation, either "many-to-one" or another specified mode.
         train_program (dict): The training program configuration. Format: {'model_name': {'input_sizes': [], 'step_sizes': []}}
         main_saving_path (str): The main path where the training results will be saved.
@@ -26,7 +29,6 @@ class Training:
                  fs=250,
                  test_size=0.2,
                  is_normalize=True,
-                 input_sequence_length=2000,
                  mode="many-to-one",
                  train_program=None,
                  main_saving_path=None,
@@ -43,7 +45,6 @@ class Training:
         self.fs = fs
         self.test_size = test_size
         self.is_normalize = is_normalize
-        self.input_sequence_length = input_sequence_length
         self.mode = mode
         self.train_program = self.training_program_formater(train_program)
         self.main_saving_path = main_saving_path
@@ -56,6 +57,7 @@ class Training:
                                            normalizing_range=normalizing_range,
                                            normalizing_method=normalizing_method)
         self.saver = Saver()
+        self.plotter = Plot()
 
     def training_program_formater(self, train_program):
         try:
@@ -67,8 +69,7 @@ class Training:
                                 train_program[model_name][key][i] = self.convert_sec_to_samples(int(val[:-1]), self.fs)
             return train_program
         except Exception as e:
-            print(
-                f"Error in training program formater: {e}. Training program should be in the format: {{'model_name': {{'input_sizes': [], 'step_sizes': []}}}}. The input sizes and step sizes should be in samples or seconds with 's' at the end.")
+            logger.error(f"Error in training program formater: {e}. Training program should be in the format: {{'model_name': {{'input_sizes': [], 'step_sizes': []}}}}. The input sizes and step sizes should be in samples or seconds with 's' at the end.")
             return None
 
     def convert_sec_to_samples(self, sec, fs):
@@ -95,12 +96,15 @@ class Training:
         else:
             for model_name, model_details in self.train_program.items():
                 if 'step_sizes' not in model_details.keys():
-                    raise ValueError(f"[ERROR] Step sizes are not defined for the model {model_name}. Please define the step sizes.")
+                    logger.error(f"[ValueError] Step sizes are not defined for the model {model_name}. Please define the step sizes.")
+                    raise
                 if 'input_sizes' not in model_details.keys():
-                    raise ValueError(f"[ERROR] Input sizes are not defined for the model {model_name}. Please define the input sizes.")
+                    logger.error(f"[ValueError] Input sizes are not defined for the model {model_name}. Please define the input sizes.")
+                    raise
                 if len(model_details['input_sizes']) > 1 and len(model_details['input_sizes']) != len(
                         model_details['step_sizes']):
-                    raise ValueError(f"[ERROR] The number of input sizes should be equal to the number of step sizes for the model {model_name}.")
+                    logger.error(f"[ValueError] The number of input sizes should be equal to the number of step sizes for the model {model_name}.")
+                    raise
 
 
 
@@ -120,7 +124,8 @@ class Training:
             # print zip object elements
             return list(zip(model_details['input_sizes'], model_details['step_sizes']))
         else:
-            raise ValueError("[ERROR] The number of input sizes should be equal to the number of step sizes.")
+            logger.error(f"[ValueError] The number of input sizes should be equal to the number of step sizes.")
+            raise
 
     def training_pipeline(self, segments_dict):
         """
@@ -154,6 +159,8 @@ class Training:
 
             # 3. Loop through the input sizes and step sizes for each model
             for input_size, step_size in self.zip_input_step_sizes(model_details):
+
+                logger.trial_settings(model_name=model_name, input_size=input_size, step_size=step_size)
 
                 eval_result_dicts = {}
 
@@ -192,6 +199,10 @@ class Training:
                     for channel_index in range(segments_dict[list(segments_dict.keys())[0]][0].shape[0]):
                         # Exclude the event ID channel
                         if channel_index != self.eventID_channel_ind:
+
+                            # Log tqdm progress
+                            logger.info(f"Training model for channel {channel_index} | side {side} | channel {channel_index}.")
+
                             # 5.1 Create the model name for saving
                             model_name_side = f"{model_name}_input_{input_size}_step_{step_size}_channel_{channel_index}_side_{side}"
 
@@ -201,14 +212,14 @@ class Training:
 
                             # 5.3 Train the model
                             with self.strategy.scope():  # Use the passed strategy
-                                print(f"   [INFO] Training model for channel {channel_index} and side {side}.")
+                                logger.info(f"Training model for channel {channel_index} and side {side}.")
                                 model = MLNetworks.load_model(model_name=model_name,
                                                               input_shape=(input_size, 1),
                                                               output_layer_dim=1,
                                                               dropout_rate=0.2)
                                 engine = MLEngine.MLEngine(model=model, strategy=self.strategy,  # Pass the strategy
-                                                           initial_learning_rate=0.001, decay_steps=1000,
-                                                           decay_rate=0.96, staircase=True)
+                                                           initial_learning_rate=0.0001, decay_steps=100000,
+                                                           decay_rate=0.96, staircase=True, is_test_code=self.is_test_code)
 
                             engine.train_model(X, y,
                                                batch_size=self.batch_size,
@@ -229,9 +240,20 @@ class Training:
                                                                TrainDataPrepare_class=self.train_prep,
                                                                channel_index=channel_index)
 
+                            self.plotter.plot_pred_vs_true(y_true=eval_segment[0][channel_index, :], # Use the original data
+                                                           y_pred=evaluation['predicted_fitted'],
+                                                           save_path=evaluation_directory,
+                                                           model_name=model_name,
+                                                           channel_id=channel_index,
+                                                           input_size=input_size,
+                                                           step_size=step_size,
+                                                           x_min=0,
+                                                           x_max=500,
+                                                           is_test_code=self.is_test_code)
+
                             eval_result_dicts[f'channel_{channel_index}_side_{side}'] = evaluation
 
-                            print(f"   [INFO] Model evaluated for channel {channel_index} and side {side}.")
+                            logger.info(f"Model evaluated for channel {channel_index} and side {side}.")
 
                             # Update the progress bar
                             pbar.update(1)
@@ -250,7 +272,7 @@ class Training:
 
                 # 7.3 Save the evaluation results to a CSV file into the main directory
                 csv_model_name = f"{model_name}_input_{input_size}_step_{step_size}"
-                self.saver.save_evaluations_to_csv(path=model_directory, evaluations=eval_result_dicts, model_name=csv_model_name)
+                self.saver.save_evaluations_to_csv(path=main_directory, evaluations=eval_result_dicts, model_name=csv_model_name)
 
         # Close the progress bar
         pbar.close()

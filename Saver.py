@@ -4,6 +4,9 @@ import numpy as np
 import datetime
 from scipy.io import savemat
 
+from Logger import Logger
+logger = Logger(__name__, code_file_name="Saver.py")
+
 class Saver:
     """
     A class used to handle saving of data in various formats such as .mat and .csv
@@ -44,7 +47,8 @@ class Saver:
                 The name of the folder to be created within the path.
         """
         if not path:
-            raise ValueError("[ERROR] Path is not defined.")
+            logger.error("[ValueError] Path is not defined.")
+            raise
 
         if experiment_folder:
             path = os.path.join(path, datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
@@ -80,14 +84,13 @@ class Saver:
 
             for key, value in evaluations.items():
                 all_channels.append(value['predicted_fitted'])
-            print(f"   [INFO] Evaluation results length: {len(all_channels)} channels. Shape of the data: {all_channels[0].shape}. Event ID channel shape: {eventID_channel[:len(all_channels[0])].shape}")
+            logger.info(f"[INFO] Evaluation results length: {len(all_channels)} channels. Shape of the data: {all_channels[0].shape}. Event ID channel shape: {eventID_channel[:len(all_channels[0])].shape}")
             all_channels.append(eventID_channel[:len(all_channels[0])])
             all_signal_channels = np.array(all_channels)
             savemat(file_name=filepath, mdict={'EEG_rec': all_signal_channels})
-            print(f"   [INFO] Evaluation .mat file saved to {path}.")
+            logger.info(f"[INFO] Evaluation .mat file saved to {path}.")
         except Exception as e:
-            raise ValueError(f"[ERROR] Error in saving evaluations to .mat file: {e}. Shape of the data: {all_channels.shape}")
-
+            logger.error(f"[ValueError] Error in saving evaluations to .mat file: {e}. Shape of the data: {all_channels.shape}")
 
     def save_evaluations_to_csv(self, path, evaluations, filename='Overall Results.csv', model_name=None):
         """
@@ -107,9 +110,8 @@ class Saver:
         try:
             if model_name is None:
                 model_name = 'Unknown Model' # default model name
-            else:
-                filename = f'{model_name}_{filename}'
 
+            filename = f'{filename}'
             filepath = os.path.join(path, filename)
             mean_absolute_errors = []
             root_mean_squared_errors = []
@@ -122,6 +124,8 @@ class Saver:
                 root_mean_squared_errors.append(value['rmse'])
                 r2_scores.append(value['r2'])
                 channel_IDs.append(key)
+
+            # Calculate the mean, median, and standard deviation of the evaluation results
             # -------------------------
             mean_MAEs = np.mean(mean_absolute_errors)
             mean_RMSEs = np.mean(root_mean_squared_errors)
@@ -181,7 +185,8 @@ class Saver:
                 else:
                     self.append_to_csv(filepath, out_value_dict)
         except Exception as e:
-            raise ValueError(f"[ERROR] Error in saving evaluations to CSV: {e}")
+            logger.error(f"[ValueError] Error in saving evaluations to .csv file: {e}")
+            raise
 
 
     def create_new_csv(self, filepath, header_list, out_value_dict):
@@ -203,7 +208,8 @@ class Saver:
                 writer.writerow(header_list)
                 writer.writerow(out_value_dict.values())
         except Exception as e:
-            raise ValueError(f"[ERROR] Error in creating new CSV file: {e}")
+            logger.error(f"[ValueError] Error in creating new CSV file: {e}")
+            raise
 
     def append_to_csv(self, filepath, out_value_dict):
         """
@@ -221,9 +227,9 @@ class Saver:
                 writer = csv.writer(file)
                 writer.writerow(out_value_dict.values())
         except Exception as e:
-            raise ValueError(f"[ERROR] Error in appending to CSV file: {e}")
+            logger.error(f"[ValueError] Error in appending to CSV file: {e}")
+            raise
 
     # GETTERS -------------------------------------------------------------------
-
     def get_parent_directory(self, path):
         return os.path.dirname(path)

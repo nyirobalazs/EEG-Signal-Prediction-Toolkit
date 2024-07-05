@@ -1,0 +1,28 @@
+{
+  "IS_TEST_CODE": false,
+  "LOAD_DIRECTORY": "C:\\Users\\ban28\\OneDrive - University of Bath\\Documents\\PHD\\PhD code\\Data from Damien\\EEG prediction tool\\data",
+  "SAVE_DIRECTORY": "C:\\Users\\ban28\\OneDrive - University of Bath\\Documents\\PHD\\PhD code\\Data from Damien\\EEG prediction tool\\save",
+  "FREQUENCY_RATE": 250,
+  "TEST_SIZE": 0.2,
+  "IS_NORMALIZE": true,
+  "NORMALIZE_METHOD": "minmax",
+  "NORMALIZE_RANGE": [0, 1],
+  "EVENT_ID_CHANNEL_INDEX": 3,
+  "TRIAL_START_IDS": [768, 1023],
+  "FAILED_SEGMENT_IDS": [1023],
+  "TRIGGER_IDS": [1, 2],
+  "MODE": "many-to-one",
+  "EPOCHS": 2,
+  "BATCH_SIZE": 32,
+  "REQUIRED_STRUCTURE_NAMES": ["xLeft", "xRight", "trainY"],
+  "TRAIN_PROGRAM": {
+    "LSTM": {
+      "input_sizes": [10, 12],
+      "step_sizes": [3, 3]
+    },
+    "BiLSTM": {
+      "input_sizes": [10],
+      "step_sizes": [3]
+    }
+  }
+}

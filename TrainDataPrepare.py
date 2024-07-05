@@ -2,6 +2,9 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import MinMaxScaler
 import numpy as np
 
+from Logger import Logger
+logger = Logger(__name__, code_file_name="TrainDataPrepare.py")
+
 
 class Scaler:
     def __init__(self, normalizing_range=(0, 1), normalizing_method="minmax", eventID_channel_ind=3):
@@ -22,7 +25,8 @@ class Scaler:
                 elif self.scaler_method == "standard":
                     scaler = StandardScaler()
                 else:
-                    raise ValueError(f"[ERROR] Normalization method {self.scaler_method} is not defined.")
+                    logger.error(f"[ValueError] Normalization method {self.scaler_method} is not defined.")
+                    raise
                 normalised_channel = scaler.fit_transform(channel_data).flatten()
                 self.scalers.append(scaler)
             else:
@@ -56,7 +60,7 @@ class TrainDataPrepare:
 
 
     # DATA PREPARATION -----------------------------------------------------------
-    def create_dataset_many_to_one(self, data, network_inp_len=100, forecast_step_size=1):
+    def create_dataset_many_to_one(self, data, network_inp_len=100, forecast_step_size=1, is_test_code=False):
         """
         Create dataset for LSTM model.
 
@@ -68,17 +72,21 @@ class TrainDataPrepare:
         Y (numpy array): Output data for LSTM.
         """
         X, Y = [], []
+        STOP_TEST_INDEX = 10000
 
         for i in range(len(data) - network_inp_len - forecast_step_size):
             X.append(data[i:(i + network_inp_len)])
             Y.append(data[i + network_inp_len + forecast_step_size - 1])
+            if is_test_code and i == STOP_TEST_INDEX:
+                break
         return np.array(X), np.array(Y)
 
     def prepare_many_to_one_data(self, input_segments=None, network_inp_len=100, forecast_step_size=1,
                                  include_eventID=True, is_test_code=False, is_training=True):
 
         if input_segments is None:
-            raise ValueError("[ERROR] Input segments are not defined.")
+            logger.error("[ValueError] Input segments are not defined.")
+            raise
 
         # 1. RESHAPE THE DATA ----------------------------------------------------
         # 1.1 if multiple segments are included then concatenate them into one segment
@@ -103,7 +111,8 @@ class TrainDataPrepare:
         for channel_data in normalized_data:
             X, Y = self.create_dataset_many_to_one(channel_data,
                                                    network_inp_len=network_inp_len,
-                                                   forecast_step_size=forecast_step_size)
+                                                   forecast_step_size=forecast_step_size,
+                                                   is_test_code=is_test_code)
             X_channels.append(X)
             Y_channels.append(Y)
 
@@ -135,21 +144,24 @@ class TrainDataPrepare:
 
         # Check if the event ID channel index is set
         if include_eventID and self.eventID_channel_ind is None:
-            raise ValueError("[ERROR] Event ID channel index is not set.")
+            logger.error("[ValueError] Event ID channel index is not set.")
+            raise
         elif include_eventID and self.eventID_channel_ind == required_channel_index:
-            raise ValueError("[ERROR] Event ID channel index and required channel index are the same.")
+            logger.error("[ValueError] Event ID channel index and required channel index are the same.")
+            raise
 
         # 1. Prepare the data
-
         if mode == "many-to-one":
             if required_channel_index is not None:
-                raise ValueError("[ERROR] Required channel index mode is not finished yet")
+                logger.error("[ValueError] Required channel index mode is not finished yet")
+                raise
             else:
                 x, y = self.prepare_many_to_one_data(input_segments=segments, network_inp_len=input_sequence_len,
                                                      forecast_step_size=forecast_step_size, include_eventID=include_eventID,
                                                      is_test_code=is_test_code, is_training=is_training)
 
-                print(f"   [INFO] Data preparation finished. X shape: {x.shape}, Y shape: {y.shape}")
+                logger.info(f"Data preparation finished. X shape: {x.shape}, Y shape: {y.shape}")
                 return x, y, self.get_eventID_channel_data(), self.get_scaler()
         else:
-            raise ValueError(f"[ERROR] Mode {mode} is not defined.")
+            logger.error(f"[ValueError] Mode {mode} is not defined.")
+            raise

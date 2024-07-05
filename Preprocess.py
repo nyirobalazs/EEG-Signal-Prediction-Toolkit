@@ -2,6 +2,9 @@ import numpy as np
 from scipy.signal import butter, lfilter, freqz
 from scipy.fftpack import fft
 
+from Logger import Logger
+logger = Logger(__name__, code_file_name="Preprocess.py")
+
 
 class Preprocess:
     def __init__(self, eventID_channel_ind=3):
@@ -21,12 +24,15 @@ class Preprocess:
 
         try:
             if not isinstance(source_file_directory, list):
-                raise ValueError("[ERROR] Source file directory must be a list.")
+                logger.error("[ValueError] Source file directory must be a list.")
+                raise
             if not all([isinstance(file_data, dict) for file_data in source_file_directory]):
-                raise ValueError("[ERROR] Source file directory must contain dictionaries.")
+                logger.error("[ValueError] Source file directory must contain dictionaries.")
+                raise
 
         except Exception as e:
-            raise ValueError(f"[ERROR] Error in testing source file directory: {e}")
+            logger.error(f"[ValueError] Error in testing source file directory: {e}")
+            raise
 
     # SEGMENT CUTTERS -----------------------------------------------------------
     def cut_segments(self, source_file_directory, trial_start_ids=None, mode='many-to-one', structure_name='trainY'):
@@ -50,7 +56,8 @@ class Preprocess:
             for file_data in source_file_directory:
                 source_structure = file_data[structure_name]
                 if self.eventID_channel_ind >= source_structure.shape[0]:
-                    raise ValueError("[ERROR] Event ID channel index out of range.")
+                    logger.error("[ValueError] Event ID channel index out of range.")
+                    raise
                 else:
                     eventID_channel = source_structure[self.eventID_channel_ind, :]
                     indices = np.where(np.isin(eventID_channel, trial_start_ids))[0]
@@ -58,7 +65,8 @@ class Preprocess:
                         segment = source_structure[:, index:indices[num + 1] if num + 1 < len(indices) else None]
                         self.segments.append(segment)
         else:
-            raise ValueError("[ERROR] Invalid mode. Choose either 'many-to-one' or 'event_segments'.")
+            logger.error("[ValueError] Invalid mode. Choose either 'many-to-one' or 'event_segments'.")
+            raise
 
     # SEGMENT FILTERS ----------------------------------------------------------
     def filter_failed_segments(self, failed_segment_ids):
@@ -71,7 +79,8 @@ class Preprocess:
             self.segments = [segment for segment in self.segments if
                              segment[self.eventID_channel_ind, 0] not in failed_segment_ids]
         except Exception as e:
-            raise ValueError(f"[ERROR] Error in filtering failed segments: {e}")
+            logger.error(f"[ValueError] Error in filtering failed segments: {e}")
+            raise
 
     def filter_segments_by_trigger(self, trigger_ids):
         """
@@ -83,7 +92,8 @@ class Preprocess:
             self.segments = [segment for segment in self.segments if
                              any(np.isin(segment[self.eventID_channel_ind, :], trigger_ids))]
         except Exception as e:
-            raise ValueError(f"[ERROR] Error in filtering segments by trigger: {e}")
+            logger.error(f"[ValueError] Error in filtering segments by trigger: {e}")
+            raise
 
     # SIGNAL FILTERS -----------------------------------------------------------
     def butter_lowpass(self, cutoff, fs, order=5):
@@ -93,7 +103,8 @@ class Preprocess:
             b, a = butter(order, normal_cutoff, btype='low', analog=False)
             return b, a
         except Exception as e:
-            raise ValueError(f"Error in butter_lowpass: {e}")
+            logger.error(f"[ValueError] Error in butter_lowpass: {e}")
+            raise
 
     def butter_highpass(self, cutoff, fs, order=5):
         try:
@@ -102,7 +113,8 @@ class Preprocess:
             b, a = butter(order, normal_cutoff, btype='high', analog=False)
             return b, a
         except Exception as e:
-            raise ValueError(f"[ERROR] Error in butter_highpass: {e}")
+            logger.error(f"[ValueError] Error in butter_highpass: {e}")
+            raise
 
     def butter_bandpass(self, lowcut, highcut, fs, order=5):
         try:
@@ -112,14 +124,16 @@ class Preprocess:
             b, a = butter(order, [low, high], btype='band')
             return b, a
         except Exception as e:
-            raise ValueError(f"[ERROR] Error in butter_bandpass: {e}")
+            logger.error(f"[ValueError] Error in butter_bandpass: {e}")
+            raise
 
     def butter_filter(self, data, b, a):
         try:
             y = lfilter(b, a, data)
             return y
         except Exception as e:
-            raise ValueError(f"[ERROR] Error in butter_filter: {e}")
+            logger.error(f"[ValueError] Error in butter_filter: {e}")
+            raise
 
     def low_cut_filter(self, cutoff, fs, order=5):
         try:
@@ -128,7 +142,8 @@ class Preprocess:
                 for i in range(3):
                     segment[i, :] = self.butter_filter(segment[i, :], b, a)
         except Exception as e:
-            raise ValueError(f"[ERROR] Error in low_cut_filter: {e}")
+            logger.error(f"[ValueError] Error in low_cut_filter: {e}")
+            raise
 
     def high_cut_filter(self, cutoff, fs, order=5):
         try:
@@ -137,7 +152,8 @@ class Preprocess:
                 for i in range(3):
                     segment[i, :] = self.butter_filter(segment[i, :], b, a)
         except Exception as e:
-            raise ValueError(f"[ERROR] Error in high_cut_filter: {e}")
+            logger.error(f"[ValueError] Error in high_cut_filter: {e}")
+            raise
 
     def bandpass_filter(self, lowcut, highcut, fs, order=5):
         try:
@@ -146,13 +162,15 @@ class Preprocess:
                 for i in range(3):
                     segment[i, :] = self.butter_filter(segment[i, :], b, a)
         except Exception as e:
-            raise ValueError(f"[ERROR] Error in bandpass_filter: {e}")
+            logger.error(f"[ValueError] Error in bandpass_filter: {e}")
+            raise
 
     def linenoise_filter(self, linenoise, fs, order=5):
         try:
             self.bandpass_filter(linenoise - 1, linenoise + 1, fs, order)
         except Exception as e:
-            raise ValueError(f"[ERROR] Error in linenoise_filter: {e}")
+            logger.error(f"[ValueError] Error in linenoise_filter: {e}")
+            raise
 
     def fast_fourier_transform(self):
         try:
@@ -160,7 +178,8 @@ class Preprocess:
                 for i in range(3):
                     segment[i, :] = fft(segment[i, :])
         except Exception as e:
-            raise ValueError(f"[ERROR] Error in fast_fourier_transform: {e}")
+            logger.error(f"[ValueError] Error in fast_fourier_transform: {e}")
+            raise
 
     # GETTERS ------------------------------------------------------------------
     def get_segments_dict(self):
@@ -231,6 +250,6 @@ class Preprocess:
             self.segments_dict[structure_name] = self.get_segments()
             self.clear_segments()
 
-        print(f"   [INFO] Preprocessing pipeline completed. Mode: {mode}. Number of segments: {len(self.segments_dict[structure_name_list[0]])}")
+        logger.info(f"Preprocessing pipeline completed. Mode: {mode}. Number of segments: {len(self.segments_dict[structure_name_list[0]])}")
 
         return self.get_segments_dict()
