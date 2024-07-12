@@ -3,6 +3,10 @@ import os
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # or any {'0', '1', '2'}
 
+# Set environment variables for debugging
+os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] = "true"
+os.environ["NCCL_DEBUG"] = "INFO"
+
 import tensorflow as tf
 
 # Suppress TensorFlow logging - not showing infos
@@ -20,6 +24,21 @@ def mean_accuracy_within_tolerance(y_true, y_pred):
     y_pred = tf.cast(y_pred, tf.float32)
     diff = tf.abs(y_true - y_pred)
     return tf.reduce_mean(tf.cast(tf.less(diff, 0.01), tf.float32))
+
+def configure_memory_growth():
+    """
+    Configures TensorFlow to allow memory growth for the GPU.
+    """
+    try:
+        for gpu in tf.config.experimental.list_physical_devices('GPU'):
+            tf.config.experimental.set_memory_growth(gpu, True)
+        logical_gpus = tf.config.experimental.list_logical_devices('GPU')
+        logger.info(f"Physical GPUs: {len(logical_gpus)}. Memory growth is configured.")
+    except Exception as e:
+        logger.error(f"Error in configuring memory growth: {e}")
+
+# Configure the memory growth for the GPU
+configure_memory_growth()
 
 class MLEngine:
     """
@@ -133,7 +152,7 @@ class MLEngine:
         """
 
         # Define the callbacks
-        logger.info(f" Training the model with {model_type} model type.")
+        logger.info(f"Training the model with {model_type} model type.")
 
         early_stopping = EarlyStopping(monitor='val_loss', patience=3, verbose=1, mode='min', restore_best_weights=True)
         model_checkpoint = ModelCheckpoint(f'{save_path}/models/{model_name}.keras', monitor='val_loss',
@@ -236,7 +255,7 @@ class MLEngine:
 
         # create a dictionary with the evaluation results and predicted_fitted
         evaluation = {'mae': mae, 'rmse': rmse, 'r2': r2, 'predicted_fitted': predicted_fitted}
-        logger.info(f" Evaluation results: MAE={mae}, RMSE={rmse}, R2={r2}. Predicted shape: {predicted_fitted.shape}")
+        logger.info(f"Evaluation results: MAE={mae}, RMSE={rmse}, R2={r2}. Predicted shape: {predicted_fitted.shape}")
         return evaluation
 
 

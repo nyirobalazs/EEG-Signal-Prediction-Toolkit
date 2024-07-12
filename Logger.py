@@ -136,6 +136,24 @@ class Logger:
         self._check_log_folder()
         self.logger.warning(message)
 
+    def create_divider_line(self, length=100, symbol='-', new_line=True):
+        """
+        Creates a divider line.
+
+        Parameters
+        ----------
+        length: int, optional
+            The length of the divider line.
+        symbol: str, optional
+            The symbol to use for the divider line.
+        new_line: bool, optional
+            Whether to add a new line after the divider line.
+        """
+        divider_line = f"{symbol * length}"
+        if new_line:
+            divider_line += "\n"
+        return divider_line
+
     def trial_settings(self, model_name, input_size, step_size):
         """
         Logs the trial settings.
@@ -150,12 +168,17 @@ class Logger:
             The step size.
         """
         trial_settings = (
+            f"\n\n"
+            f"{self.create_divider_line(length=100, symbol='-', new_line=True)}\n"
             f"Trial Settings:\n"
+            f"===============\n"
             f"  - Model: {model_name}\n"
             f"  - Input Size: {input_size}\n"
-            f"  - Step Size: {step_size}\n"
+            f"  - Step Size: {step_size}\n\n"
+            f"{self.create_divider_line(length=100, symbol='-', new_line=True)}"
         )
         self.info(trial_settings)
+
 
     def log_system_info(self, strategy=None):
         """
@@ -177,7 +200,10 @@ class Logger:
                     self.error(f"Error in checking if TensorFlow is built with CUDA: {e}")
 
                 gpus = tf.config.experimental.list_physical_devices('GPU')
-                system_info = ("\nSystem Information:\n"
+                system_info = (
+                               f"\n"
+                               f"\nSystem Information:\n"
+                               f"====================\n"
                                f"  - Platform: {platform.system()}\n"
                                f"  - Platform Release: {platform.release()}\n"
                                f"  - Platform Version: {platform.version()}\n"
@@ -192,8 +218,10 @@ class Logger:
                 for gpu in gpus:
                     details = tf.config.experimental.get_device_details(gpu)
                     gpu_info = (
-                        f"  - GPU {gpu.name}: {details['device_name']}\n"
+                        f"\n"
+                        f"  \n- GPU {gpu.name}: {details['device_name']}\n"
                         f"    - Compute Capability: {details['compute_capability']}\n"
+                        f"{self.create_divider_line(length=100, symbol='=', new_line=True)}"
                     )
                     self.info(gpu_info)
 

@@ -8,6 +8,7 @@ from Plot import Plot
 from Logger import Logger
 logger = Logger(__name__, code_file_name="Training.py")
 
+
 class Training:
     """
     The Training class is responsible for setting up and executing the training pipeline for a given model.
@@ -106,8 +107,7 @@ class Training:
                     logger.error(f"[ValueError] The number of input sizes should be equal to the number of step sizes for the model {model_name}.")
                     raise
 
-
-
+    @staticmethod
     def zip_input_step_sizes(self, model_details):
         """
         Zips the input sizes and step sizes for a given model.

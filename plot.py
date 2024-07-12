@@ -1,5 +1,5 @@
 import numpy as np
-import plotly.graph_objects as go
+from plotly import graph_objs as go
 
 from Logger import Logger
 logger = Logger(__name__, code_file_name="Plot.py")

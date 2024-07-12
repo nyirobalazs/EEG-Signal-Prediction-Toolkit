@@ -1,7 +1,7 @@
 {
-  "IS_TEST_CODE": false,
-  "LOAD_DIRECTORY": "C:\\Users\\ban28\\OneDrive - University of Bath\\Documents\\PHD\\PhD code\\Data from Damien\\EEG prediction tool\\data",
-  "SAVE_DIRECTORY": "C:\\Users\\ban28\\OneDrive - University of Bath\\Documents\\PHD\\PhD code\\Data from Damien\\EEG prediction tool\\save",
+  "IS_TEST_CODE": true,
+  "LOAD_DIRECTORY": "../data/",
+  "SAVE_DIRECTORY": "../save/",
   "FREQUENCY_RATE": 250,
   "TEST_SIZE": 0.2,
   "IS_NORMALIZE": true,
@@ -17,12 +17,12 @@
   "REQUIRED_STRUCTURE_NAMES": ["xLeft", "xRight", "trainY"],
   "TRAIN_PROGRAM": {
     "LSTM": {
-      "input_sizes": [10, 12],
-      "step_sizes": [3, 3]
+      "input_sizes": [10, 50, 100, 200, 500, 1000, 1200, 1500],
+      "step_sizes": [10, 10, 10, 10, 10, 10, 10, 10]
     },
-    "BiLSTM": {
-      "input_sizes": [10],
-      "step_sizes": [3]
+    "CNNLSTMAttentionNetwork": {
+      "input_sizes": [10, 50, 100, 200, 500, 1000, 1200, 1500],
+      "step_sizes": [10, 10, 10, 10, 10, 10, 10, 10]
     }
   }
 }
