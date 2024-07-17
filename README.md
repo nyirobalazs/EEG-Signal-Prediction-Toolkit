@@ -1,9 +1,5 @@
 # EEG-Signal-Prediction-Toolkit
 
-Here's a Markdown file for your GitHub project:
-
-```markdown
-# EEG Machine Learning Pipeline
 
 This project is a machine learning pipeline for training and evaluating various models on EEG data. The models include Dense, LSTM, Bidirectional LSTM, and Hybrid networks. The pipeline includes data preprocessing, model training, model evaluation, and result saving.
 
