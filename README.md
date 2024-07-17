@@ -120,7 +120,7 @@ You can find the config.json file in the *settings* folder. The config.json file
     - `batch_size`: The batch size for training.
     - `normalizing_range`: The range for normalization.
     - `normalizing_method`: The normalization method.
-    - `strategy: The strategy for training.
+    - `strategy`: The strategy for training.
 > Note: The input_sizes and step_sizes can be given in seconds by appending 's' to the end of the value. For example, '1s' would correspond to 1 second.
 
 
