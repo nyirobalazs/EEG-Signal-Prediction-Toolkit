@@ -11,7 +11,6 @@ This project is a machine learning pipeline for training and evaluating various 
 - [Output Library Structure](#output-library-structure)
 - [How to use the code](#how-to-use-the-code)
 - [Additional Steps](#additional-steps)
-- [Project Files](#project-files)
 - [Note](#note)
 
 ## Setup
@@ -26,7 +25,7 @@ pip install -r requirements.txt
 
 ## Usage
 
-To use the project, you need to run the Training.py script. This script sets up and executes the training pipeline for a given model. The script takes as input a dictionary of data segments and a training program configuration.
+To use the project, you need to run the Main.py script. This script sets up and executes the training pipeline for the settings that were set up in the config.json file in the settings folder. The script takes as input a dictionary of data segments and a training program configuration.
 
 **The training program configuration is a dictionary that specifies the models to train and their parameters. The format of the training program configuration is as follows:**
 
@@ -41,7 +40,7 @@ To use the project, you need to run the Training.py script. This script sets up 
 
 The `input_sizes` and `step_sizes` can be specified in samples or seconds with 's' at the end. For example, an input size of 1 second can be specified as "1s".
 
-> The Training.py script outputs the trained models and their evaluation results. The models are saved in the models directory and the evaluation results are saved in the results directory.
+> The Main.py script outputs the trained models and their evaluation results. The models are saved in the models directory and the evaluation results are saved in the results directory.
 
 ## Input and Output Files
 
@@ -51,7 +50,7 @@ The output of the project includes the trained models and their evaluation resul
 
 ## Config.json File
 
-The config.json file is used to configure the training pipeline. It includes parameters such as the event ID channel index, sampling frequency, test size, normalization settings, mode of operation, training program, main saving path, and test code flag.
+You can find the config.json file in the *settings* folder. The config.json file is used to configure the training pipeline. It includes parameters such as the event ID channel index, sampling frequency, test size, normalization settings, mode of operation, training program, main saving path, and test code flag.
 
 **Here is an example of a config.json file:**
 
@@ -73,7 +72,7 @@ The config.json file is used to configure the training pipeline. It includes par
 }
 ```
 
-> You can modify the parameters in the config.json file to customize the training pipeline.
+> You can modify the parameters in the config.json file to customize the training pipeline. See it in detail in the *Additional steps* section below.
 
 ## Output Library Structure
 
@@ -84,21 +83,31 @@ The config.json file is used to configure the training pipeline. It includes par
 
 ## How to use the code
 
-**If you are a beginner programmer, here are some steps to run the project:**
+**Here are some steps to run the project:**
 
 1. Install Python on your computer. You can download Python from the official website: https://www.python.org/downloads/
-2. Install the required Python packages. Open your terminal, navigate to the project directory, and run the command: `pip install -r requirements.txt`
-3. Run the Training.py script. In your terminal, run the command: `python Training.py`
-4. Check the models and results directories for the output.
-5. Remember to modify the config.json file to customize the training pipeline. You can open the config.json file in a text editor, change the parameters, and save the file.
+2. Install the required Python packages. Open your terminal, navigate to the project directory, and run the command:
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. Run the Main.py script. In your terminal, run the command:
+   ```python
+   python Main.py
+   ```
+
+   or if you want to use a different config file or store it elsewhere:
+   ```python
+   python Main.py path_to_config.json
+   ```
+6. Check the models and results directories for the output.
+7. Remember to modify the config.json file to customize the training pipeline. You can open the config.json file in a text editor, change the parameters, and save the file.
 
 ## Additional Steps
 
-**To run the provided code, you need to follow these steps:**
+**You can optimize your project in the following ways:**
 
-1. **Install the necessary packages:** The required packages are listed in the requirements.txt file. You can install them using pip by running the command `pip install -r requirements.txt` in your terminal.
-2. **Prepare your data:** The code expects your data to be in a specific format. The data should be a dictionary of segments, where each segment is a 2D Numpy array. The dictionary keys should be 'xLeft', 'xRight', and 'trainY'. The 'xLeft' and 'xRight' keys correspond to the left and right sides of the data, respectively. The 'trainY' key corresponds to the training labels.
-3. **Configure the settings:** The config.json file contains various settings for the training process. Here are some of the parameters you can change:
+1. **Prepare your data:** The code expects your data to be in a specific format. The data should be a dictionary of segments, where each segment is a 2D Numpy array. The dictionary keys should be 'xLeft', 'xRight', and 'trainY'. The 'xLeft' and 'xRight' keys correspond to the left and right sides of the data, respectively. The 'trainY' key corresponds to the training labels.
+2. **Configure the settings:** The config.json file (in the settings folder) contains various settings for the training process. Here are some of the parameters you can change:
     - `eventID_channel_ind`: The index of the event ID channel.
     - `fs`: The sampling frequency.
     - `test_size`: The proportion of the dataset to include in the test split.
@@ -114,7 +123,6 @@ The config.json file is used to configure the training pipeline. It includes par
     - `strategy: The strategy for training.
 > Note: The input_sizes and step_sizes can be given in seconds by appending 's' to the end of the value. For example, '1s' would correspond to 1 second.
 
-4. **Run the code:** Once you have installed the necessary packages, prepared your data, and configured the settings, you can run the code. The main function to call is training_pipeline from the Training class. This function takes the segment dictionary as input and runs the training process.
 
 #### The output of the code includes:
 
@@ -123,17 +131,7 @@ The config.json file is used to configure the training pipeline. It includes par
 - **Plots:** Plots of the true vs predicted values are also saved for each channel and side. These plots can help you visually assess the performance of the models.
 
 > Remember to always check the logs for any errors or warnings during the training process. The logs can provide valuable information about what might be going wrong.
-
-## Project Files
-
-**The main files in this project include:**
-
-- Loader.py: Contains functions for loading and preprocessing the data.
-- Main.py: The main entry point for the project.
-- Saver.py: Contains functions for saving the models and evaluation results.
-- Training.py: Contains the main training pipeline.
-
-> Ensure you have these files in your project directory to run the project successfully.
+> 
 
 ## Note
 
