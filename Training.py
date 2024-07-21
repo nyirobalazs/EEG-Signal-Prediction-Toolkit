@@ -4,7 +4,7 @@ from TrainDataPrepare import TrainDataPrepare
 from Saver import Saver
 from tqdm import tqdm
 
-from Plot import Plot
+from plot import Plot
 from Logger import Logger
 logger = Logger(__name__, code_file_name="Training.py")
 
@@ -108,7 +108,7 @@ class Training:
                     raise
 
     @staticmethod
-    def zip_input_step_sizes(self, model_details):
+    def zip_input_step_sizes(model_details):
         """
         Zips the input sizes and step sizes for a given model.
 
