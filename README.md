@@ -92,12 +92,12 @@ You can find the config.json file in the *settings* folder. The config.json file
    ```
 4. Run the Main.py script. In your terminal, run the command:
    ```python
-   python Main.py
+   python3 Main.py
    ```
 
    or if you want to use a different config file or store it elsewhere:
    ```python
-   python Main.py path_to_config.json
+   python3 Main.py path_to_config.json
    ```
 6. Check the models and results directories for the output.
 7. Remember to modify the config.json file to customize the training pipeline. You can open the config.json file in a text editor, change the parameters, and save the file.
