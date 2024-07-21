@@ -1,5 +1,5 @@
 {
-  "IS_TEST_CODE": true,
+  "IS_TEST_CODE": false,
   "LOAD_DIRECTORY": "../data/",
   "SAVE_DIRECTORY": "../save/",
   "FREQUENCY_RATE": 250,
