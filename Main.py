@@ -88,6 +88,12 @@ def main(config_path=None):
     Parameters:
     - config_path (str, optional): The path to the JSON configuration file. If not provided, the newest configuration file from the 'settings' directory is used.
     """
+    
+    # Other initializations
+    os.environ["LD_LIBRARY_PATH"] = "/usr/local/cuda/lib64:" + os.environ.get("LD_LIBRARY_PATH", "")
+    os.environ["NCCL_DEBUG"] = "INFO"
+    os.environ["NCCL_DEBUG_SUBSYS"] = "ALL"
+    
     if config_path is None:
         settings_dir = os.path.join(os.path.dirname(__file__), 'settings')
         config_path = select_config_file(settings_dir)
@@ -95,7 +101,7 @@ def main(config_path=None):
     load_config(config_path)  # Load configurations
 
     logger = Logger(__name__, code_file_name="Main.py", folder_path=SAVE_DIRECTORY)  # Initialize logger
-    strategy = tf.distribute.MirroredStrategy()  # Define TensorFlow distribution strategy
+    strategy = tf.distribute.MirroredStrategy(cross_device_ops=tf.distribute.ReductionToOneDevice())  # Define TensorFlow distribution strategy
 
     logger.log_system_info(strategy=strategy)  # Log system information
 

@@ -68,7 +68,7 @@ class CNNLSTMAttentionNetwork:
         self.output_layer_dim = output_layer_dim
         self.dropout_rate = dropout_rate
         self.num_heads = num_heads
-        self.model = self.build_model()
+        #self.model = self.build_model()
 
     def build_model(self):
         input_layer = Input(shape=(self.input_shape[0], self.input_shape[1]))
@@ -126,8 +126,8 @@ class LSTMNetwork:
         model.add(BatchNormalization())
         model.add(Dropout(0.2))
 
-        model.add(LSTM(50, kernel_regularizer=l2(0.001)))
-        model.add(Dense(self.output_layer_dim))
+        model.add(LSTM(25, kernel_regularizer=l2(0.001)))
+        model.add(Dense(self.output_layer_dim, activation='linear'))
 
         return model
 

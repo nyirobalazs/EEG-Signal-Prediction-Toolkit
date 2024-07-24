@@ -216,10 +216,10 @@ class Training:
                                 model = MLNetworks.load_model(model_name=model_name,
                                                               input_shape=(input_size, 1),
                                                               output_layer_dim=1,
-                                                              dropout_rate=0.2)
+                                                              dropout_rate=0.5)
                                 engine = MLEngine.MLEngine(model=model, strategy=self.strategy,  # Pass the strategy
-                                                           initial_learning_rate=0.0001, decay_steps=100000,
-                                                           decay_rate=0.96, staircase=True, is_test_code=self.is_test_code)
+                                                           initial_learning_rate=0.6, decay_steps=10000,
+                                                           decay_rate=0.98, staircase=True, is_test_code=self.is_test_code)
 
                             engine.train_model(X, y,
                                                batch_size=self.batch_size,

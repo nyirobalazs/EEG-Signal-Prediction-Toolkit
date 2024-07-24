@@ -129,6 +129,8 @@ class Plot:
             ),
             legend=dict(orientation='h')
         )
+        
+        fig.update_layout(width=1200, height=600)
 
         if save_path:
             file_name = f"{model_name}_Channel_{channel_id}_Input_{input_size}_Step_{step_size}_Pred_vs_True"

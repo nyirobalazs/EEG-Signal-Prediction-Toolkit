@@ -74,7 +74,7 @@ class MLEngine:
     """
 
     def __init__(self, model, strategy, optimizer='adam',  # Add the strategy parameter
-                 loss='mean_squared_error',
+                 loss='mean_absolute_error',
                  metrics=[mean_accuracy_within_tolerance],
                  initial_learning_rate=None,
                  decay_steps=None,
@@ -126,7 +126,7 @@ class MLEngine:
 
         self.model.compile(optimizer=self.optimizer, loss=self.loss, metrics=self.metrics)
 
-    def train_model(self, X_train, y_train, batch_size=32, epochs=1, save_path=None,
+    def train_model(self, X_train, y_train, batch_size=32, epochs=100, save_path=None,
                     model_name=None, split_ratio=0.2, model_type='many_to_one'):
         """
         Trains the model with the provided training data and parameters.
@@ -154,10 +154,10 @@ class MLEngine:
         # Define the callbacks
         logger.info(f"Training the model with {model_type} model type.")
 
-        early_stopping = EarlyStopping(monitor='val_loss', patience=3, verbose=1, mode='min', restore_best_weights=True)
-        model_checkpoint = ModelCheckpoint(f'{save_path}/models/{model_name}.keras', monitor='val_loss',
+        early_stopping = EarlyStopping(monitor='val_loss', patience=50, verbose=0, mode='min', restore_best_weights=True)
+        model_checkpoint = ModelCheckpoint(f'{save_path}/models/{model_name}.h5', monitor='val_loss',
                                            save_best_only=True)
-        reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=10, min_lr=0.001)
+        reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=50, min_lr=0.01)
         csv_logger = CSVLogger(f'{save_path}/logs/{model_name}_training.log')
         tensorboard = TensorBoard(log_dir=f'{save_path}/logs/tensor_boards')
 
@@ -212,7 +212,7 @@ class MLEngine:
 
         # Predict the values
         with self.strategy.scope():
-            predicted_segments = self.model.predict(x_eval)
+            predicted_segments = self.model.predict(x_eval, verbose=1 if self.is_test_code else 0)
 
         return predicted_segments
 
