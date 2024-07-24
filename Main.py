@@ -26,7 +26,19 @@ REQUIRED_KEYS = {
     "EPOCHS": int,  # Number of training epochs
     "BATCH_SIZE": int,  # Training batch size
     "REQUIRED_STRUCTURE_NAMES": list,  # List of required structure names for processing
-    "TRAIN_PROGRAM": dict  # Dictionary containing training program configurations
+    "TRAIN_PROGRAM": dict, # Dictionary containing training program configurations
+    "LOSS_FUNCTION": str,  # Loss function to be used
+    "INITIAL_LEARNING_RATE": float,  # Initial learning rate
+    "DECAY_STEPS": int,  # Number of steps for learning rate decay
+    "DECAY_RATE": float,  # Rate of learning rate decay
+    "STAIRCASE": bool,  # Flag to indicate if learning rate decay is to be applied in a staircase manner
+    "EARLY_STOPPING_PATIENCE": int,  # Patience for early stopping
+    "LOSS_MONITOR": str,  # Metric to monitor for loss
+    "LOSS_MODE": str,  # Mode for loss monitoring
+    "REDUCE_LR_FACTOR": float,  # Factor for reducing learning rate
+    "REDUCE_LR_PATIENCE": int,  # Patience for reducing learning rate
+    "MIN_LR": float,  # Minimum learning rate
+    "DROPOUT_RATE": float  # Dropout rate
 }
 
 def validate_config(config):
@@ -120,7 +132,20 @@ def main(config_path=None):
                        batch_size=BATCH_SIZE,
                        normalizing_range=NORMALIZE_RANGE,
                        normalizing_method=NORMALIZE_METHOD,
-                       strategy=strategy)
+                       strategy=strategy,
+                       loss_function=LOSS_FUNCTION,
+                       initial_learning_rate=INITIAL_LEARNING_RATE,
+                       decay_steps=DECAY_STEPS,
+                       decay_rate=DECAY_RATE,
+                       staircase=STAIRCASE,
+                       early_stopping_patience=EARLY_STOPPING_PATIENCE,
+                       loss_monitor=LOSS_MONITOR,
+                       loss_mode=LOSS_MODE,
+                       reduce_lr_factor=REDUCE_LR_FACTOR,
+                       reduce_lr_patience=REDUCE_LR_PATIENCE,
+                       min_lr=MIN_LR,
+                       dropout_rate=DROPOUT_RATE
+                       )
 
     # Execute the pipeline
     source_file_directory = loader.loader_pipeline(LOAD_DIRECTORY)

@@ -80,7 +80,13 @@ class MLEngine:
                  decay_steps=None,
                  decay_rate=None,
                  staircase=False,
-                 is_test_code=False):
+                 is_test_code=False,
+                 early_stopping_patience=50,
+                 loss_monitor='val_loss',
+                 loss_mode='min',
+                 reduce_lr_factor=0.1,
+                 reduce_lr_patience=50,
+                 min_lr=0.01):
         """
         Constructs all the necessary attributes for the MLEngine object.
 
@@ -112,6 +118,13 @@ class MLEngine:
             self.staircase = staircase
             self.compile_model()
             self.is_test_code = is_test_code
+            self.early_stopping_patience = early_stopping_patience
+            self.loss_monitor = loss_monitor
+            self.loss_mode = loss_mode
+            self.reduce_lr_factor = reduce_lr_factor
+            self.reduce_lr_patience = reduce_lr_patience
+            self.min_lr = min_lr
+
 
     def compile_model(self):
         """Compiles the model with the specified optimizer, loss function, and metrics."""
@@ -154,10 +167,13 @@ class MLEngine:
         # Define the callbacks
         logger.info(f"Training the model with {model_type} model type.")
 
-        early_stopping = EarlyStopping(monitor='val_loss', patience=50, verbose=0, mode='min', restore_best_weights=True)
-        model_checkpoint = ModelCheckpoint(f'{save_path}/models/{model_name}.h5', monitor='val_loss',
+        early_stopping = EarlyStopping(monitor=self.loss_monitor, patience=self.early_stopping_patience,
+                                       verbose=1 if self.is_test_code else 0, mode=self.loss_mode,
+                                       restore_best_weights=True)
+        model_checkpoint = ModelCheckpoint(f'{save_path}/models/{model_name}.h5', monitor=self.loss_monitor,
                                            save_best_only=True)
-        reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=50, min_lr=0.01)
+        reduce_lr = ReduceLROnPlateau(monitor=self.loss_monitor, factor=self.reduce_lr_factor,
+                                      patience=self.reduce_lr_patience, min_lr=self.min_lr)
         csv_logger = CSVLogger(f'{save_path}/logs/{model_name}_training.log')
         tensorboard = TensorBoard(log_dir=f'{save_path}/logs/tensor_boards')
 

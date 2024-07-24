@@ -38,7 +38,19 @@ class Training:
                  batch_size=32,
                  normalizing_range=(0, 1),
                  normalizing_method="minmax",
-                 strategy=None):  # Add the strategy parameter
+                 strategy=None,
+                 loss_function=None,
+                 initial_learning_rate=0.6,
+                 decay_steps=10000,
+                 decay_rate=0.98,
+                 staircase=True,
+                 early_stopping_patience=50,
+                 loss_monitor='val_loss',
+                 loss_mode='min',
+                 reduce_lr_factor=0.1,
+                 reduce_lr_patience=50,
+                 min_lr=0.01,
+                 dropout_rate=0.2):
 
         self.strategy = strategy
 
@@ -52,6 +64,19 @@ class Training:
         self.is_test_code = is_test_code
         self.epochs = epochs
         self.batch_size = batch_size
+
+        self.loss_function = loss_function
+        self.initial_learning_rate = initial_learning_rate
+        self.decay_steps = decay_steps
+        self.decay_rate = decay_rate
+        self.staircase = staircase
+        self.early_stopping_patience = early_stopping_patience
+        self.loss_monitor = loss_monitor
+        self.loss_mode = loss_mode
+        self.reduce_lr_factor = reduce_lr_factor
+        self.reduce_lr_patience = reduce_lr_patience
+        self.min_lr = min_lr
+        self.dropout_rate = dropout_rate
 
         self.check_train_program()
         self.train_prep = TrainDataPrepare(eventID_channel_ind=eventID_channel_ind,
@@ -211,15 +236,28 @@ class Training:
                             y = Y_channels[channel_index]
 
                             # 5.3 Train the model
-                            with self.strategy.scope():  # Use the passed strategy
+                            with self.strategy.scope():
+
                                 logger.info(f"Training model for channel {channel_index} and side {side}.")
+
                                 model = MLNetworks.load_model(model_name=model_name,
                                                               input_shape=(input_size, 1),
                                                               output_layer_dim=1,
-                                                              dropout_rate=0.5)
-                                engine = MLEngine.MLEngine(model=model, strategy=self.strategy,  # Pass the strategy
-                                                           initial_learning_rate=0.6, decay_steps=10000,
-                                                           decay_rate=0.98, staircase=True, is_test_code=self.is_test_code)
+                                                              dropout_rate=self.dropout_rate)
+
+                                engine = MLEngine.MLEngine(model=model,
+                                                           strategy=self.strategy,
+                                                           initial_learning_rate=self.initial_learning_rate,
+                                                           decay_steps=self.decay_steps,
+                                                           decay_rate=self.decay_rate,
+                                                           staircase=self.staircase,
+                                                           is_test_code=self.is_test_code,
+                                                           early_stopping_patience=self.early_stopping_patience,
+                                                           loss_monitor=self.loss_monitor,
+                                                           loss_mode=self.loss_function,
+                                                           reduce_lr_factor=self.reduce_lr_factor,
+                                                           reduce_lr_patience=self.reduce_lr_patience,
+                                                           min_lr=self.min_lr)
 
                             engine.train_model(X, y,
                                                batch_size=self.batch_size,
