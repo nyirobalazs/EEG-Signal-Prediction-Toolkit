@@ -152,12 +152,13 @@ class Training:
             logger.error(f"[ValueError] The number of input sizes should be equal to the number of step sizes.")
             raise
 
-    def training_pipeline(self, segments_dict):
+    def training_pipeline(self, segments_dict, config_path=None):
         """
         Executes the training pipeline for each model in the training program.
 
         Args:
             segments_dict (dict): A dictionary containing the data segments.
+            config_path (str, optional): The path to the JSON configuration file.
         """
         # Calculate total iterations
         number_of_models = len(self.train_program)
@@ -173,6 +174,8 @@ class Training:
 
         # 1. Create the main directory
         main_directory = self.saver.create_directory(self.main_saving_path, experiment_folder=True)
+        if config_path is not None:
+            self.saver.save_config_json(main_directory, config_path)
 
         # 2. Loop through the models
         for model_name, model_details in self.train_program.items():

@@ -230,6 +230,27 @@ class Saver:
             logger.error(f"[ValueError] Error in appending to CSV file: {e}")
             raise
 
+    # save config.json file to the main folder
+    @staticmethod
+    def save_config_json(path, config):
+        """
+        Saves the configuration dictionary to a JSON file.
+
+        Parameters
+        ----------
+            path : str
+                The path where the JSON file should be saved.
+            config : dict
+                The configuration dictionary to be saved.
+        """
+        try:
+            with open(path, 'w') as f:
+                json.dump(config, f)
+            logger.info(f"[INFO] Configuration JSON file saved to {path}.")
+        except Exception as e:
+            logger.error(f"[ValueError] Error in saving configuration JSON file: {e}")
+            raise
+
     # GETTERS -------------------------------------------------------------------
     def get_parent_directory(self, path):
         return os.path.dirname(path)

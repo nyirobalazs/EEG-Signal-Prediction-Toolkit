@@ -155,7 +155,7 @@ def main(config_path=None):
                                                         failed_segment_ids=FAILED_SEGMENT_IDS,
                                                         trigger_ids=TRIGGER_IDS,
                                                         structure_name_list=REQUIRED_STRUCTURE_NAMES)
-    trainer.training_pipeline(segments_dict)
+    trainer.training_pipeline(segments_dict, config_path=config_path)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Load configurations from a JSON file.')
