@@ -1,3 +1,17 @@
+"""
+EEG Signal Prediction project.
+
+Copyright (C) 2024 Balazs Nyiro, University of Bath
+
+This program is free software: you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation, either version  3 of the License,
+or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+for more details.
+"""
+
 import logging
 import platform
 import os
@@ -5,16 +19,28 @@ import psutil
 import tensorflow as tf
 from datetime import datetime
 
+# ============================== CONSTANTS ==============================
+
+# Permanent variables
+LOG_FOLDER_ENV_VAR = 'log'
+DEFAULT_LOG_LEVEL = logging.DEBUG
+DEFAULT_LOG_FORMAT = '%(asctime)s - %(levelname)s - {code_file_name}:%(lineno)d - %(message)s'
+DEFAULT_TIME_FORMAT = '%d-%m-%Y-%H-%M'
+DEFAULT_DIVIDER_LENGTH = 100
+DEFAULT_DIVIDER_SYMBOL = '-'
+DEFAULT_NEW_LINE = True
+DEFAULT_LOG_FOLDER = 'logs'
+
+# ======================================================================
+
+
 class Logger:
-    def __init__(self, name, code_file_name, info_log_file=None, error_log_file=None, folder_path=None):
+    def __init__(self, name, code_file_name, folder_path=None):
 
         self.code_file_name = code_file_name
         self.logger = logging.getLogger(name)
-        self.logger.setLevel(logging.DEBUG)
+        self.logger.setLevel(DEFAULT_LOG_LEVEL)
         self.folder_path = folder_path
-
-        # Create log folder if it doesn't exist
-        #log_folder_path = self._create_log_folder_path()
 
         # Create file handlers
         self._set_handlers('info')
@@ -22,29 +48,29 @@ class Logger:
 
     @staticmethod
     def _create_log_file_name(log_file_type):
-        return f"{log_file_type}_{datetime.now().strftime('%d-%m-%Y-%H-%M')}.log"
+        return f"{log_file_type}_{datetime.now().strftime(DEFAULT_TIME_FORMAT)}.log"
 
     def _create_log_folder_path(self):
-        if self.folder_path and not os.getenv('LOG_FOLDER'):
-            log_folder = os.path.join(self.folder_path, 'logs')
+        if self.folder_path and not os.getenv(LOG_FOLDER_ENV_VAR):
+            log_folder = os.path.join(self.folder_path, DEFAULT_LOG_FOLDER)
             if not os.path.exists(log_folder):
                 os.makedirs(log_folder)
-            os.environ['LOG_FOLDER'] = log_folder
+            os.environ[LOG_FOLDER_ENV_VAR] = log_folder
             return log_folder
-        elif os.getenv('LOG_FOLDER'):
-            return os.getenv('LOG_FOLDER')
+        elif os.getenv(LOG_FOLDER_ENV_VAR):
+            return os.getenv(LOG_FOLDER_ENV_VAR)
         else:
-            return f"{os.getcwd()}/logs"
+            return f"{os.getcwd()}/{DEFAULT_LOG_FOLDER}"
 
     def _create_log_file_path(self, log_file_type):
-        if os.getenv('LOG_FOLDER'):
-            return os.path.join(os.getenv('LOG_FOLDER'), self._create_log_file_name(log_file_type))
+        if os.getenv(LOG_FOLDER_ENV_VAR):
+            return os.path.join(os.getenv(LOG_FOLDER_ENV_VAR), self._create_log_file_name(log_file_type))
         else:
-            return os.path.join('logs', self._create_log_file_name(log_file_type))
+            return os.path.join(DEFAULT_LOG_FOLDER, self._create_log_file_name(log_file_type))
 
     @staticmethod
     def _get_log_file_path():
-        return os.getenv('LOG_FOLDER')
+        return os.getenv(LOG_FOLDER_ENV_VAR)
     @staticmethod
     def _create_log_file_if_not_exists(filename):
         """Creates log file if it doesn't exist."""
@@ -64,8 +90,8 @@ class Logger:
         elif log_file_type == 'error':
             handler.setLevel(logging.ERROR)
         else:
-            handler.setLevel(logging.DEBUG)
-        formatter = logging.Formatter(f'%(asctime)s - %(levelname)s - {self.code_file_name}:%(lineno)d - %(message)s')
+            handler.setLevel(DEFAULT_LOG_LEVEL)
+        formatter = logging.Formatter(DEFAULT_LOG_FORMAT.format(code_file_name=self.code_file_name))
         handler.setFormatter(formatter)
         return handler
 
@@ -78,7 +104,7 @@ class Logger:
             handler.setLevel(logging.INFO)
         elif log_file_type == 'error':
             handler.setLevel(logging.ERROR)
-        formatter = logging.Formatter(f'%(asctime)s - %(levelname)s - {self.code_file_name}:%(lineno)d - %(message)s')
+        formatter = logging.Formatter(DEFAULT_LOG_FORMAT.format(code_file_name=self.code_file_name))
         handler.setFormatter(formatter)
         return handler
 
@@ -89,15 +115,15 @@ class Logger:
 
     def _set_handlers(self, log_file_type):
         try:
-            if not os.getenv('LOG_FOLDER'):
+            if not os.getenv(LOG_FOLDER_ENV_VAR):
                 pass
                 # handler = self._create_stream_handler(log_file_type)
                 # self._add_file_handler(handler)
-            elif os.getenv('LOG_FOLDER') and any(isinstance(handler, logging.StreamHandler) for handler in self.logger.handlers): # If stream handler exists, remove it and add file handler
+            elif os.getenv(LOG_FOLDER_ENV_VAR) and any(isinstance(handler, logging.StreamHandler) for handler in self.logger.handlers): # If stream handler exists, remove it and add file handler
                 handler = self._create_file_handler(log_file_type)
                 self._add_file_handler(handler)
                 self._remove_stream_handler()
-            elif os.getenv('LOG_FOLDER') and not any(isinstance(handler, logging.StreamHandler) for handler in self.logger.handlers): # If stream handler doesn't exist, add file handler
+            elif os.getenv(LOG_FOLDER_ENV_VAR) and not any(isinstance(handler, logging.StreamHandler) for handler in self.logger.handlers): # If stream handler doesn't exist, add file handler
                 handler = self._create_file_handler(log_file_type)
                 self._add_file_handler(handler)
             else:
@@ -107,18 +133,17 @@ class Logger:
             self.logger.error(f"Error in setting handlers: {e}")
 
     def _check_log_folder(self):
-        if os.getenv('LOG_FOLDER') and not any(isinstance(handler, logging.FileHandler) for handler in self.logger.handlers):
+        if os.getenv(LOG_FOLDER_ENV_VAR) and not any(isinstance(handler, logging.FileHandler) for handler in self.logger.handlers):
             info_handler = self._create_file_handler('info')
             error_handler = self._create_file_handler('error')
             self._add_file_handler(info_handler)
             self._add_file_handler(error_handler)
-        elif not os.getenv('LOG_FOLDER'):
-            os.environ['LOG_FOLDER'] = self._create_log_folder_path()
+        elif not os.getenv(LOG_FOLDER_ENV_VAR):
+            os.environ[LOG_FOLDER_ENV_VAR] = self._create_log_folder_path()
             info_handler = self._create_file_handler('info')
             error_handler = self._create_file_handler('error')
             self._add_file_handler(info_handler)
             self._add_file_handler(error_handler)
-
 
     def info(self, message):
         self._check_log_folder()
@@ -136,7 +161,7 @@ class Logger:
         self._check_log_folder()
         self.logger.warning(message)
 
-    def create_divider_line(self, length=100, symbol='-', new_line=True):
+    def create_divider_line(self, length=DEFAULT_DIVIDER_LENGTH, symbol=DEFAULT_DIVIDER_SYMBOL, new_line=DEFAULT_NEW_LINE):
         """
         Creates a divider line.
 
@@ -169,16 +194,15 @@ class Logger:
         """
         trial_settings = (
             f"\n\n"
-            f"{self.create_divider_line(length=100, symbol='-', new_line=True)}\n"
+            f"{self.create_divider_line(length=DEFAULT_DIVIDER_LENGTH, symbol=DEFAULT_DIVIDER_SYMBOL, new_line=DEFAULT_NEW_LINE)}\n"
             f"Trial Settings:\n"
             f"===============\n"
             f"  - Model: {model_name}\n"
             f"  - Input Size: {input_size}\n"
             f"  - Step Size: {step_size}\n\n"
-            f"{self.create_divider_line(length=100, symbol='-', new_line=True)}"
+            f"{self.create_divider_line(length=DEFAULT_DIVIDER_LENGTH, symbol=DEFAULT_DIVIDER_SYMBOL, new_line=DEFAULT_NEW_LINE)}"
         )
         self.info(trial_settings)
-
 
     def log_system_info(self, strategy=None):
         """
@@ -221,7 +245,7 @@ class Logger:
                         f"\n"
                         f"  \n- GPU {gpu.name}: {details['device_name']}\n"
                         f"    - Compute Capability: {details['compute_capability']}\n"
-                        f"{self.create_divider_line(length=100, symbol='=', new_line=True)}"
+                        f"{self.create_divider_line(length=DEFAULT_DIVIDER_LENGTH, symbol='=', new_line=DEFAULT_NEW_LINE)}"
                     )
                     self.info(gpu_info)
 

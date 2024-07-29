@@ -1,3 +1,17 @@
+"""
+EEG Signal Prediction project.
+
+Copyright (C) 2024 Balazs Nyiro, University of Bath
+
+This program is free software: you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation, either version  3 of the License,
+or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+for more details.
+"""
+
 import numpy as np
 from scipy.signal import butter, lfilter, freqz
 from scipy.fftpack import fft
@@ -13,7 +27,8 @@ class Preprocess:
         self.segments_dict = {}
 
     # SOURCE FILE DIRECTORY TEST -----------------------------------------------
-    def test_source_file_directory(self, source_file_directory):
+    @staticmethod
+    def test_source_file_directory(source_file_directory):
         """
         Test source file directory. Must be a list of dictionaries containing 'trainX', 'trainY', 'testX', 'testY' keys.
 
@@ -96,7 +111,8 @@ class Preprocess:
             raise
 
     # SIGNAL FILTERS -----------------------------------------------------------
-    def butter_lowpass(self, cutoff, fs, order=5):
+    @staticmethod
+    def butter_lowpass(cutoff, fs, order=5):
         try:
             nyq = 0.5 * fs
             normal_cutoff = cutoff / nyq
@@ -106,7 +122,8 @@ class Preprocess:
             logger.error(f"[ValueError] Error in butter_lowpass: {e}")
             raise
 
-    def butter_highpass(self, cutoff, fs, order=5):
+    @staticmethod
+    def butter_highpass(cutoff, fs, order=5):
         try:
             nyq = 0.5 * fs
             normal_cutoff = cutoff / nyq
@@ -116,7 +133,8 @@ class Preprocess:
             logger.error(f"[ValueError] Error in butter_highpass: {e}")
             raise
 
-    def butter_bandpass(self, lowcut, highcut, fs, order=5):
+    @staticmethod
+    def butter_bandpass(lowcut, highcut, fs, order=5):
         try:
             nyq = 0.5 * fs
             low = lowcut / nyq
@@ -127,7 +145,8 @@ class Preprocess:
             logger.error(f"[ValueError] Error in butter_bandpass: {e}")
             raise
 
-    def butter_filter(self, data, b, a):
+    @staticmethod
+    def butter_filter(data, b, a):
         try:
             y = lfilter(b, a, data)
             return y

@@ -1,3 +1,17 @@
+"""
+EEG Signal Prediction project.
+
+Copyright (C) 2024 Balazs Nyiro, University of Bath
+
+This program is free software: you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation, either version  3 of the License,
+or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+for more details.
+"""
+
 import os
 import scipy.io
 
@@ -59,7 +73,8 @@ class SourceFileLoader:
             logger.error(f"[ValueError] Error in finding .mat files: {e}")
             raise
 
-    def find_file(self, directory, filename):
+    @staticmethod
+    def find_file(directory, filename):
         """
         Finds a specific file in the given directory.
 

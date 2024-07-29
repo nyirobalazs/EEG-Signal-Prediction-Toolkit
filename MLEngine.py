@@ -1,5 +1,18 @@
-import os
+"""
+EEG Signal Prediction project.
 
+Copyright (C) 2024 Balazs Nyiro, University of Bath
+
+This program is free software: you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation, either version  3 of the License,
+or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+for more details.
+"""
+
+import os
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # or any {'0', '1', '2'}
 
@@ -18,6 +31,17 @@ import numpy as np
 
 from Logger import Logger
 logger = Logger(__name__, code_file_name="MLEngine.py")
+
+# ============================== CONSTANTS ==============================
+
+# Permanent variables
+MODEL_CHECKPOINT_FOLDER_NAME = 'models'
+MODEL_CHECKPOINT_FORMAT = 'h5'
+LOGS_FOLDER_NAME = 'logs'
+TENSORNOARD_LOGS_FOLDER_NAME = 'tensor_boards'
+
+# ======================================================================
+
 
 def mean_accuracy_within_tolerance(y_true, y_pred):
     # Calculate the difference between the true and predicted values and check if the difference is within a tolerance
@@ -170,12 +194,12 @@ class MLEngine:
         early_stopping = EarlyStopping(monitor=self.loss_monitor, patience=self.early_stopping_patience,
                                        verbose=1 if self.is_test_code else 0, mode=self.loss_mode,
                                        restore_best_weights=True)
-        model_checkpoint = ModelCheckpoint(f'{save_path}/models/{model_name}.h5', monitor=self.loss_monitor,
+        model_checkpoint = ModelCheckpoint(f'{save_path}/{MODEL_CHECKPOINT_FOLDER_NAME}/{model_name}.{MODEL_CHECKPOINT_FORMAT}', monitor=self.loss_monitor,
                                            save_best_only=True)
         reduce_lr = ReduceLROnPlateau(monitor=self.loss_monitor, factor=self.reduce_lr_factor,
                                       patience=self.reduce_lr_patience, min_lr=self.min_lr)
-        csv_logger = CSVLogger(f'{save_path}/logs/{model_name}_training.log')
-        tensorboard = TensorBoard(log_dir=f'{save_path}/logs/tensor_boards')
+        csv_logger = CSVLogger(f'{save_path}/{LOGS_FOLDER_NAME}/{model_name}_training.log')
+        tensorboard = TensorBoard(log_dir=f'{save_path}/{LOGS_FOLDER_NAME}/{TENSORNOARD_LOGS_FOLDER_NAME}')
 
         # Add the callbacks to the model training
         with self.strategy.scope():

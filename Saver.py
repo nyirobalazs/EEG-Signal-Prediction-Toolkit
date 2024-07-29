@@ -1,11 +1,37 @@
+"""
+EEG Signal Prediction project.
+
+Copyright (C) 2024 Balazs Nyiro, University of Bath
+
+This program is free software: you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation, either version  3 of the License,
+or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+for more details.
+"""
+
 import os
 import csv
 import numpy as np
 import datetime
 from scipy.io import savemat
+import json
 
 from Logger import Logger
 logger = Logger(__name__, code_file_name="Saver.py")
+
+# ============================== CONSTANTS =====================================
+
+# Permanent variables
+DEFAULT_MAT_FILENAME = 'EEG_rec.mat'
+DEFAULT_CSV_FILENAME = 'Overall Results.csv'
+DEFAULT_MODEL_NAME = 'Unknown Model'
+EXPERIMENT_FOLDER_NAME_TIMESTAMP_FORMAT = "%Y-%m-%d_%H-%M-%S"
+
+# ==============================================================================
+
 
 class Saver:
     """
@@ -33,7 +59,9 @@ class Saver:
         pass
 
     # DIRECTORY FUNCTIONS -------------------------------------------------------
-    def create_directory(self, path, experiment_folder=False, folder_name=None):
+
+    @staticmethod
+    def create_directory(path, experiment_folder=False, folder_name=None):
         """
         Creates a directory at the specified path.
 
@@ -51,7 +79,7 @@ class Saver:
             raise
 
         if experiment_folder:
-            path = os.path.join(path, datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+            path = os.path.join(path, datetime.datetime.now().strftime(EXPERIMENT_FOLDER_NAME_TIMESTAMP_FORMAT))
         elif folder_name is not None:
             path = os.path.join(path, folder_name)
         else:
@@ -63,7 +91,9 @@ class Saver:
         return path
 
     # SAVE FUNCTIONS ------------------------------------------------------------
-    def save_evaluations_to_mat(self, path, evaluations, eventID_channel, filename='EEG_rec.mat'):
+
+    @staticmethod
+    def save_evaluations_to_mat(path, evaluations, eventID_channel, filename=DEFAULT_MAT_FILENAME):
         """
         Saves the evaluation results to a .mat file.
 
@@ -92,7 +122,7 @@ class Saver:
         except Exception as e:
             logger.error(f"[ValueError] Error in saving evaluations to .mat file: {e}. Shape of the data: {all_channels.shape}")
 
-    def save_evaluations_to_csv(self, path, evaluations, filename='Overall Results.csv', model_name=None):
+    def save_evaluations_to_csv(self, path, evaluations, filename=DEFAULT_CSV_FILENAME, model_name=None):
         """
         Saves the evaluation results to a .csv file.
 
@@ -109,7 +139,7 @@ class Saver:
         """
         try:
             if model_name is None:
-                model_name = 'Unknown Model' # default model name
+                model_name = DEFAULT_MODEL_NAME # default model name
 
             filename = f'{filename}'
             filepath = os.path.join(path, filename)
@@ -188,8 +218,8 @@ class Saver:
             logger.error(f"[ValueError] Error in saving evaluations to .csv file: {e}")
             raise
 
-
-    def create_new_csv(self, filepath, header_list, out_value_dict):
+    @staticmethod
+    def create_new_csv(filepath, header_list, out_value_dict):
         """
         Creates a new .csv file with the specified header and values.
 
@@ -211,7 +241,8 @@ class Saver:
             logger.error(f"[ValueError] Error in creating new CSV file: {e}")
             raise
 
-    def append_to_csv(self, filepath, out_value_dict):
+    @staticmethod
+    def append_to_csv(filepath, out_value_dict):
         """
         Appends values to an existing .csv file.
 
@@ -232,25 +263,31 @@ class Saver:
 
     # save config.json file to the main folder
     @staticmethod
-    def save_config_json(path, config):
+    def save_config_json(save_path, config_file_path):
         """
         Saves the configuration dictionary to a JSON file.
 
         Parameters
         ----------
-            path : str
+            save_path : str
                 The path where the JSON file should be saved.
-            config : dict
+            config_file_path : dict
                 The configuration dictionary to be saved.
         """
         try:
-            with open(path, 'w') as f:
-                json.dump(config, f)
-            logger.info(f"[INFO] Configuration JSON file saved to {path}.")
+            if not save_path.endswith('config.json'):
+                save_path = os.path.join(save_path, 'config.json')
+            # copy config file from config_file_path to save_path
+            with open(config_file_path, 'r') as f:
+                config = json.load(f)
+            with open(save_path, 'w') as f:
+                json.dump(config, f, indent=4)
+            logger.info(f"[INFO] Configuration JSON file saved to {save_path}.")
         except Exception as e:
             logger.error(f"[ValueError] Error in saving configuration JSON file: {e}")
             raise
 
     # GETTERS -------------------------------------------------------------------
-    def get_parent_directory(self, path):
+    @staticmethod
+    def get_parent_directory(path):
         return os.path.dirname(path)

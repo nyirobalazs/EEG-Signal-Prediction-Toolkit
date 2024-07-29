@@ -1,3 +1,17 @@
+"""
+EEG Signal Prediction project.
+
+Copyright (C) 2024 Balazs Nyiro, University of Bath
+
+This program is free software: you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation, either version  3 of the License,
+or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+for more details.
+"""
+
 import tensorflow as tf
 import json
 import argparse
@@ -7,6 +21,8 @@ from Loader import SourceFileLoader
 from Preprocess import Preprocess
 from Training import Training
 from Logger import Logger
+
+# ============================== GLOBAL VARIABLES ==============================
 
 # Required configuration keys and their expected types
 REQUIRED_KEYS = {
@@ -41,6 +57,9 @@ REQUIRED_KEYS = {
     "DROPOUT_RATE": float  # Dropout rate
 }
 
+# =================================================================================
+
+
 def validate_config(config):
     """
     Validates the configuration dictionary against the required keys and types.
@@ -61,6 +80,7 @@ def validate_config(config):
     if len(config["NORMALIZE_RANGE"]) != 2 or not all(isinstance(i, (int, float)) for i in config["NORMALIZE_RANGE"]):
         raise ValueError("NORMALIZE_RANGE must be a list of two numeric values.")
 
+
 def load_config(json_path):
     """
     Loads the configuration from a JSON file and updates the global variables accordingly.
@@ -73,6 +93,7 @@ def load_config(json_path):
     validate_config(config)
     config["NORMALIZE_RANGE"] = tuple(config["NORMALIZE_RANGE"])  # Convert list to tuple for consistency
     globals().update(config)
+
 
 def select_config_file(settings_dir):
     """
@@ -92,6 +113,7 @@ def select_config_file(settings_dir):
         raise FileNotFoundError("No JSON configuration files found in the settings directory.")
     config_files = sorted(config_files, key=lambda x: os.path.getmtime(os.path.join(settings_dir, x)), reverse=True)
     return os.path.join(settings_dir, config_files[0])
+
 
 def main(config_path=None):
     """
@@ -146,7 +168,7 @@ def main(config_path=None):
                        min_lr=MIN_LR,
                        dropout_rate=DROPOUT_RATE
                        )
-
+ 
     # Execute the pipeline
     source_file_directory = loader.loader_pipeline(LOAD_DIRECTORY)
     segments_dict = preprocessor.preprocessing_pipeline(source_file_directory,
@@ -156,6 +178,7 @@ def main(config_path=None):
                                                         trigger_ids=TRIGGER_IDS,
                                                         structure_name_list=REQUIRED_STRUCTURE_NAMES)
     trainer.training_pipeline(segments_dict, config_path=config_path)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Load configurations from a JSON file.')

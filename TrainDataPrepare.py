@@ -1,9 +1,30 @@
+"""
+EEG Signal Prediction project.
+
+Copyright (C) 2024 Balazs Nyiro, University of Bath
+
+This program is free software: you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation, either version  3 of the License,
+or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+for more details.
+"""
+
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import MinMaxScaler
 import numpy as np
 
 from Logger import Logger
 logger = Logger(__name__, code_file_name="TrainDataPrepare.py")
+
+# ============================== CONSTANTS =====================================
+
+# Permanent variables
+STOP_TEST_INDEX = 10000
+
+# ==============================================================================
 
 
 class Scaler:
@@ -60,7 +81,9 @@ class TrainDataPrepare:
 
 
     # DATA PREPARATION -----------------------------------------------------------
-    def create_dataset_many_to_one(self, data, network_inp_len=100, forecast_step_size=1, is_test_code=False):
+
+    @staticmethod
+    def create_dataset_many_to_one(data, network_inp_len=100, forecast_step_size=1, is_test_code=False):
         """
         Create dataset for LSTM model.
 
@@ -72,7 +95,6 @@ class TrainDataPrepare:
         Y (numpy array): Output data for LSTM.
         """
         X, Y = [], []
-        STOP_TEST_INDEX = 10000
 
         for i in range(len(data) - network_inp_len - forecast_step_size):
             X.append(data[i:(i + network_inp_len)])
@@ -82,7 +104,7 @@ class TrainDataPrepare:
         return np.array(X), np.array(Y)
 
     def prepare_many_to_one_data(self, input_segments=None, network_inp_len=100, forecast_step_size=1,
-                                 include_eventID=True, is_test_code=False, is_training=True):
+                                 is_test_code=False, is_training=True):
 
         if input_segments is None:
             logger.error("[ValueError] Input segments are not defined.")
@@ -118,10 +140,10 @@ class TrainDataPrepare:
 
         return np.array(X_channels), np.array(Y_channels)
 
-
     # GETTERS -------------------------------------------------------------------
 
-    def get_selected_segment(self, input_segments, required_channel_index):
+    @staticmethod
+    def get_selected_segment(input_segments, required_channel_index):
 
         if isinstance(input_segments, list):
             np_segments = np.array(input_segments)
@@ -157,7 +179,7 @@ class TrainDataPrepare:
                 raise
             else:
                 x, y = self.prepare_many_to_one_data(input_segments=segments, network_inp_len=input_sequence_len,
-                                                     forecast_step_size=forecast_step_size, include_eventID=include_eventID,
+                                                     forecast_step_size=forecast_step_size,
                                                      is_test_code=is_test_code, is_training=is_training)
 
                 logger.info(f"Data preparation finished. X shape: {x.shape}, Y shape: {y.shape}")

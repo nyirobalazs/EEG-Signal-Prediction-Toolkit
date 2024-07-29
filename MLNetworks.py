@@ -1,3 +1,17 @@
+"""
+EEG Signal Prediction project.
+
+Copyright (C) 2024 Balazs Nyiro, University of Bath
+
+This program is free software: you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation, either version  3 of the License,
+or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+for more details.
+"""
+
 import tensorflow as tf
 # Suppress TensorFlow logging - not showing infos
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
@@ -11,6 +25,7 @@ import tensorflow as tf
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Conv1D, LSTM, Dense, Dropout, MultiHeadAttention, LayerNormalization, Add, TimeDistributed, Flatten
 from tensorflow.keras.regularizers import l2
+from tensorflow.keras.layers import LeakyReLU, PReLU, ELU, Activation
 from tensorflow.keras.optimizers import Adam
 
 # Suppress TensorFlow logging
@@ -20,6 +35,7 @@ tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
 from Logger import Logger
 logger = Logger(__name__, code_file_name="MLNetworks.py")
+
 
 def load_model(model_name, input_shape, output_layer_dim=1, dropout_rate=0.2):
     """
@@ -68,7 +84,6 @@ class CNNLSTMAttentionNetwork:
         self.output_layer_dim = output_layer_dim
         self.dropout_rate = dropout_rate
         self.num_heads = num_heads
-        #self.model = self.build_model()
 
     def build_model(self):
         input_layer = Input(shape=(self.input_shape[0], self.input_shape[1]))
@@ -97,6 +112,7 @@ class CNNLSTMAttentionNetwork:
 
         model = Model(inputs=input_layer, outputs=output_layer)
         return model
+
 
 # 2. LSTM Network --------------------------------------------------------------
 class LSTMNetwork:

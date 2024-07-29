@@ -1,12 +1,34 @@
+"""
+EEG Signal Prediction project.
+
+Copyright (C) 2024 Balazs Nyiro, University of Bath
+
+This program is free software: you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation, either version  3 of the License,
+or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+for more details.
+"""
+
 import MLNetworks
 import MLEngine
 from TrainDataPrepare import TrainDataPrepare
 from Saver import Saver
 from tqdm import tqdm
 
-from plot import Plot
+from Plotter import Plot
 from Logger import Logger
 logger = Logger(__name__, code_file_name="Training.py")
+
+# ============================== CONSTANTS =====================================
+
+# Permanent variables
+EVALUATIONS_FOLDER_NAME = "Results"
+EVALUATIONS_CSV_FILE_NAME = "{model_name}_input_{input_size}_step_{step_size}"
+
+# ==============================================================================
 
 
 class Training:
@@ -98,7 +120,8 @@ class Training:
             logger.error(f"Error in training program formater: {e}. Training program should be in the format: {{'model_name': {{'input_sizes': [], 'step_sizes': []}}}}. The input sizes and step sizes should be in samples or seconds with 's' at the end.")
             return None
 
-    def convert_sec_to_samples(self, sec, fs):
+    @staticmethod
+    def convert_sec_to_samples(sec, fs):
         """
         Convert seconds to samples.
 
@@ -168,14 +191,13 @@ class Training:
         total_iterations = number_of_models * sum_of_input_step_sizes * number_of_channels * number_of_sides
 
         # Create a progress bar
-        # Create a progress bar
         pbar = tqdm(total=total_iterations, desc=f">>> Training pipeline for {len(self.train_program)} models.",
                     bar_format='{l_bar}%s{bar}%s{r_bar}' % ('\033[37m', '\033[0m'))
 
         # 1. Create the main directory
         main_directory = self.saver.create_directory(self.main_saving_path, experiment_folder=True)
         if config_path is not None:
-            self.saver.save_config_json(main_directory, config_path)
+            self.saver.save_config_json(save_path=main_directory, config_file_path=config_path)
 
         # 2. Loop through the models
         for model_name, model_details in self.train_program.items():
@@ -183,7 +205,7 @@ class Training:
             model_directory = self.saver.create_directory(main_directory, experiment_folder=False, folder_name=model_name)
 
             # 2.2 Create the evaluation directory
-            evaluation_directory = self.saver.create_directory(model_directory, experiment_folder=False, folder_name="Results")
+            evaluation_directory = self.saver.create_directory(model_directory, experiment_folder=False, folder_name=EVALUATIONS_FOLDER_NAME)
 
             # 3. Loop through the input sizes and step sizes for each model
             for input_size, step_size in self.zip_input_step_sizes(model_details):
@@ -312,7 +334,7 @@ class Training:
                 self.saver.save_evaluations_to_mat(path=step_size_directory, evaluations=eval_result_dicts, eventID_channel=eventID_channel)
 
                 # 7.3 Save the evaluation results to a CSV file into the main directory
-                csv_model_name = f"{model_name}_input_{input_size}_step_{step_size}"
+                csv_model_name = EVALUATIONS_CSV_FILE_NAME.format(model_name=model_name, input_size=input_size, step_size=step_size)
                 self.saver.save_evaluations_to_csv(path=main_directory, evaluations=eval_result_dicts, model_name=csv_model_name)
 
         # Close the progress bar
