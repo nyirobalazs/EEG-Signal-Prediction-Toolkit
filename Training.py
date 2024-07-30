@@ -278,8 +278,9 @@ class Training:
                                                            staircase=self.staircase,
                                                            is_test_code=self.is_test_code,
                                                            early_stopping_patience=self.early_stopping_patience,
+                                                           loss=self.loss_function,
                                                            loss_monitor=self.loss_monitor,
-                                                           loss_mode=self.loss_function,
+                                                           loss_mode=self.loss_mode,
                                                            reduce_lr_factor=self.reduce_lr_factor,
                                                            reduce_lr_patience=self.reduce_lr_patience,
                                                            min_lr=self.min_lr)
