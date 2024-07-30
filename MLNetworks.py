@@ -37,6 +37,11 @@ from Logger import Logger
 logger = Logger(__name__, code_file_name="MLNetworks.py")
 
 
+class ConcatenateLayer(tf.keras.layers.Layer):
+    def call(self, inputs):
+        return tf.concat(inputs, axis=-1)
+
+
 def load_model(model_name, input_shape, output_layer_dim=1, dropout_rate=0.2):
     """
     Load the model based on the model name.
@@ -64,7 +69,7 @@ def load_model(model_name, input_shape, output_layer_dim=1, dropout_rate=0.2):
     elif model_name == 'Hybrid':
         return HybridNetwork(input_shape, output_layer_dim).build_model()
     elif model_name == 'CNNLSTMAttention':
-        return CNNLSTMAttentionNetwork(input_shape, output_layer_dim, dropout_rate).build_model()
+        return CNNLSTMAttentionNetwork(input_shape, output_layer_dim, dropout_rate).build_model
     else:
         logger.error(f"[ValueError] Model {model_name} is not defined.")
 
@@ -85,8 +90,9 @@ class CNNLSTMAttentionNetwork:
         self.output_layer_dim = output_layer_dim
         self.dropout_rate = dropout_rate
         self.activation = activation
-        self.model = self.build_model()
+        self.model = self.build_model
 
+    @property
     def build_model(self):
         input_layer = Input(shape=(self.input_shape[0], self.input_shape[1]))
 
@@ -117,7 +123,7 @@ class CNNLSTMAttentionNetwork:
         attention_block_flat = Flatten()(attention_block)
 
         # Concatenate Flattened CNN and Flattened Attention blocks
-        concatenated = tf.concat([cnn_block_flat, attention_block_flat], axis=-1)
+        concatenated = ConcatenateLayer()([cnn_block_flat, attention_block_flat])
 
         # Dense layers
         dense_layer = Dense(64)(concatenated)
