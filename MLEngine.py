@@ -150,6 +150,8 @@ class MLEngine:
 
 
     # ----------- CUSTOM LOSS FUNCTIONS ----------------
+    #TODO: modify them for many-to-many model type
+
     def huber_with_smoothness(self, y_true, y_pred):
         """
         Calculates the Huber loss with an additional smoothness regularization term.
@@ -164,11 +166,14 @@ class MLEngine:
         Returns:
         tf.Tensor: The combined loss value.
         """
-        huber_loss = tf.losses.huber(y_true, y_pred, delta=self.huber_loss_delta)
+        huber_loss = tf.keras.losses.Huber(delta=self.huber_loss_delta)(y_true, y_pred)
 
         # Smoothness regularization
-        diff = y_pred[:, 1:] - y_pred[:, :-1]
-        smoothness = tf.reduce_mean(tf.square(diff))
+        if y_pred.shape[-1] > 1:  # Ensure y_pred has more than 1 column
+            diff = y_pred[:, 1:] - y_pred[:, :-1]
+            smoothness = tf.reduce_mean(tf.square(diff))
+        else:
+            smoothness = tf.constant(0.0)  # No smoothness term if y_pred has only 1 column
 
         # Combine the losses
         loss = huber_loss + 0.01 * smoothness
@@ -239,6 +244,7 @@ class MLEngine:
             logger.error(f"Error in getting the loss functions: {e}")
             raise
 
+    # ----------- MODEL TRAINING ----------------
 
     def compile_model(self):
         """Compiles the model with the specified optimizer, loss function, and metrics."""

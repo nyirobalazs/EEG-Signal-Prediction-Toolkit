@@ -85,7 +85,7 @@ class CNNLSTMAttentionNetwork:
     - Dense block with 64 units
     """
 
-    def __init__(self, input_shape, output_layer_dim=1, dropout_rate=0.2, activation='prelu', l2_reg=0.01):
+    def __init__(self, input_shape, output_layer_dim=1, dropout_rate=0.2, activation='elu', l2_reg=0.01):
         self.input_shape = input_shape
         self.l2_reg = l2_reg
         self.output_layer_dim = output_layer_dim
@@ -105,6 +105,10 @@ class CNNLSTMAttentionNetwork:
             cnn_block = PReLU()(cnn_block)
         elif self.activation == 'elu':
             cnn_block = ELU(alpha=1.0)(cnn_block)
+        elif self.activation == 'glu':
+            cnn_block = Activation('tanh')(cnn_block)
+            cnn_block = Conv1D(filters=128, kernel_size=3, padding='same', kernel_regularizer=l2(self.l2_reg))(cnn_block)
+            cnn_block = Multiply()([cnn_block, Activation('sigmoid')(cnn_block)])
         else:
             cnn_block = Activation(self.activation)(cnn_block)
         cnn_block = Dropout(self.dropout_rate)(cnn_block)
@@ -134,6 +138,10 @@ class CNNLSTMAttentionNetwork:
             dense_layer = PReLU()(dense_layer)
         elif self.activation == 'elu':
             dense_layer = ELU(alpha=1.0)(dense_layer)
+        elif self.activation == 'glu':
+            dense_layer = Activation('tanh')(dense_layer)
+            dense_layer = Dense(128, kernel_regularizer=l2(self.l2_reg))(dense_layer)
+            dense_layer = Multiply()([dense_layer, Activation('sigmoid')(dense_layer)])
         else:
             dense_layer = Activation(self.activation)(dense_layer)
         dense_layer = Dropout(self.dropout_rate)(dense_layer)
@@ -145,40 +153,6 @@ class CNNLSTMAttentionNetwork:
 
         return model
 
-    # def __init__(self, input_shape, output_layer_dim=1, dropout_rate=0.2, num_heads=4):
-    #     self.input_shape = input_shape
-    #     self.output_layer_dim = output_layer_dim
-    #     self.dropout_rate = dropout_rate
-    #     self.num_heads = num_heads
-    #
-    # def build_model(self):
-    #     input_layer = Input(shape=(self.input_shape[0], self.input_shape[1]))
-    #
-    #     # Convolutional block
-    #     conv_block = Conv1D(filters=128, kernel_size=3, padding='same', activation='relu',
-    #                         kernel_regularizer=l2(0.001))(input_layer)
-    #     conv_block = Conv1D(filters=128, kernel_size=3, padding='same', activation='relu',
-    #                         kernel_regularizer=l2(0.001))(conv_block)
-    #     conv_block = Dropout(self.dropout_rate)(conv_block)
-    #
-    #     # Bidirectional LSTM block
-    #     lstm_block = Bidirectional(LSTM(200, return_sequences=True, kernel_regularizer=l2(0.001)))(conv_block)
-    #     lstm_block = Bidirectional(LSTM(200, return_sequences=True, kernel_regularizer=l2(0.001)))(lstm_block)
-    #     lstm_block = Dropout(self.dropout_rate)(lstm_block)
-    #
-    #     # Attention block
-    #     attention_block = MultiHeadAttention(num_heads=self.num_heads, key_dim=32)(lstm_block, lstm_block)
-    #     attention_block = Add()([attention_block, lstm_block])
-    #     attention_block = LayerNormalization(epsilon=1e-6)(attention_block)
-    #
-    #     # Dense block
-    #     dense_block = TimeDistributed(Dense(128, activation='relu'))(attention_block)
-    #     dense_block = Flatten()(dense_block)
-    #     output_layer = Dense(self.output_layer_dim)(dense_block)
-    #
-    #     model = Model(inputs=input_layer, outputs=output_layer)
-    #     return model
-
 
 # 2. LSTM Network --------------------------------------------------------------
 class LSTMNetwork:
@@ -188,87 +162,151 @@ class LSTMNetwork:
     - LSTM layer with 50 units
     """
 
-    def __init__(self, input_shape, dropout_rate=0.2, output_layer_dim=1, batch_size=32):
+    def __init__(self, input_shape, output_layer_dim=1, dropout_rate=0.2, lstm_units=100, dense_units=64, activation='elu', l2_reg=0.01):
         self.input_shape = input_shape
-        self.dropout_rate = dropout_rate
         self.output_layer_dim = output_layer_dim
-        self.batch_size = batch_size
-
+        self.dropout_rate = dropout_rate
+        self.lstm_units = lstm_units
+        self.dense_units = dense_units
+        self.activation = activation
+        self.l2_reg = l2_reg
         self.model = self.build_model()
 
+    def apply_activation(self, dense_layer):
+        if self.activation == 'leaky_relu':
+            return LeakyReLU(alpha=0.01)(dense_layer)
+        elif self.activation == 'prelu':
+            return PReLU()(dense_layer)
+        elif self.activation == 'elu':
+            return ELU(alpha=1.0)(dense_layer)
+        elif self.activation == 'glu':
+            dense_layer_tanh = Dense(self.dense_units, kernel_regularizer=l2(self.l2_reg))(dense_layer)
+            dense_layer_tanh = Activation('tanh')(dense_layer_tanh)
+            dense_layer_sigmoid = Dense(self.dense_units, kernel_regularizer=l2(self.l2_reg))(dense_layer)
+            dense_layer_sigmoid = Activation('sigmoid')(dense_layer_sigmoid)
+            return Multiply()([dense_layer_tanh, dense_layer_sigmoid])
+        else:
+            return Activation(self.activation)(dense_layer)
+
     def build_model(self):
+        input_layer = Input(shape=self.input_shape)
 
-        model = Sequential()
+        # First LSTM layer
+        lstm_layer_1 = LSTM(self.lstm_units, return_sequences=True)(input_layer)
+        lstm_layer_1 = BatchNormalization()(lstm_layer_1)
+        lstm_layer_1 = Dropout(self.dropout_rate)(lstm_layer_1)
 
-        model.add(LSTM(100, return_sequences=True, input_shape=(self.input_shape[0], self.input_shape[1]), kernel_regularizer=l2(0.001)))
-        model.add(BatchNormalization())
-        model.add(Dropout(0.2))
+        # Second LSTM layer
+        lstm_layer_2 = LSTM(self.lstm_units, return_sequences=True)(lstm_layer_1)
+        lstm_layer_2 = BatchNormalization()(lstm_layer_2)
+        lstm_layer_2 = Dropout(self.dropout_rate)(lstm_layer_2)
 
-        model.add(LSTM(100, return_sequences=True, kernel_regularizer=l2(0.001)))
-        model.add(BatchNormalization())
-        model.add(Dropout(0.2))
+        # Third LSTM layer
+        lstm_layer_3 = LSTM(self.lstm_units)(lstm_layer_2)
+        lstm_layer_3 = BatchNormalization()(lstm_layer_3)
+        lstm_layer_3 = Dropout(self.dropout_rate)(lstm_layer_3)
 
-        model.add(LSTM(25, kernel_regularizer=l2(0.001)))
-        model.add(Dense(self.output_layer_dim, activation='linear'))
+        # Dense layers
+        dense_layer_1 = Dense(self.dense_units, kernel_regularizer=l2(self.l2_reg))(lstm_layer_3)
+        dense_layer_1 = self.apply_activation(dense_layer_1)
+        dense_layer_1 = Dropout(self.dropout_rate)(dense_layer_1)
 
+        dense_layer_2 = Dense(self.dense_units, kernel_regularizer=l2(self.l2_reg))(dense_layer_1)
+        dense_layer_2 = self.apply_activation(dense_layer_2)
+        dense_layer_2 = Dropout(self.dropout_rate)(dense_layer_2)
+
+        # Output layer
+        output_layer = Dense(self.output_layer_dim, activation='linear')(dense_layer_2)
+
+        model = Model(inputs=input_layer, outputs=output_layer)
         return model
-
 
 # 3. Bidirectional LSTM Network ------------------------------------------------
 class BidirectionalLSTMNetwork:
     """
     Bidirectional LSTM Network class. This class builds a model with the following architecture:
-    - Bidirectional LSTM layer with 100 units
-    - Bidirectional LSTM layer with 50 units
-    - Bidirectional LSTM layer with 25 units
-    """
-    def __init__(self, input_shape, dropout_rate=0.2, output_layer_dim=1):
-        self.input_shape = input_shape
-        self.dropout_rate = dropout_rate
-        self.output_layer_dim = output_layer_dim
+    - Bidirectional LSTM layer with 100 units (twice)
+    - Bidirectional LSTM layer with 100
 
+    """
+    def __init__(self, input_shape, output_layer_dim=1, dropout_rate=0.2, lstm_units=100, dense_units=64, activation='relu', l2_reg=0.01):
+        self.input_shape = input_shape
+        self.output_layer_dim = output_layer_dim
+        self.dropout_rate = dropout_rate
+        self.lstm_units = lstm_units
+        self.dense_units = dense_units
+        self.activation = activation
+        self.l2_reg = l2_reg
         self.model = self.build_model()
 
+    def apply_activation(self, dense_layer):
+        if self.activation == 'leaky_relu':
+            return LeakyReLU(alpha=0.01)(dense_layer)
+        elif self.activation == 'prelu':
+            return PReLU()(dense_layer)
+        elif self.activation == 'elu':
+            return ELU(alpha=1.0)(dense_layer)
+        elif self.activation == 'glu':
+            dense_layer_tanh = Dense(self.dense_units, kernel_regularizer=l2(self.l2_reg))(dense_layer)
+            dense_layer_tanh = Activation('tanh')(dense_layer_tanh)
+            dense_layer_sigmoid = Dense(self.dense_units, kernel_regularizer=l2(self.l2_reg))(dense_layer)
+            dense_layer_sigmoid = Activation('sigmoid')(dense_layer_sigmoid)
+            return Multiply()([dense_layer_tanh, dense_layer_sigmoid])
+        else:
+            return Activation(self.activation)(dense_layer)
+
     def build_model(self):
+        input_layer = Input(shape=self.input_shape)
 
-        model = Sequential()
+        # First Bidirectional LSTM layer
+        lstm_layer_1 = Bidirectional(LSTM(self.lstm_units, return_sequences=True))(input_layer)
+        lstm_layer_1 = BatchNormalization()(lstm_layer_1)
+        lstm_layer_1 = Dropout(self.dropout_rate)(lstm_layer_1)
 
-        # Input layer
-        model.add(Input(shape=(self.input_shape[0], self.input_shape[1])))
+        # Second Bidirectional LSTM layer
+        lstm_layer_2 = Bidirectional(LSTM(self.lstm_units, return_sequences=True))(lstm_layer_1)
+        lstm_layer_2 = BatchNormalization()(lstm_layer_2)
+        lstm_layer_2 = Dropout(self.dropout_rate)(lstm_layer_2)
 
-        # First Bidirectional LSTM layer with ReLU activation
-        model.add(Bidirectional(LSTM(100, return_sequences=True)))
-        model.add(Activation('relu'))
-        model.add(Dropout(self.dropout_rate))
+        # Third Bidirectional LSTM layer
+        lstm_layer_3 = Bidirectional(LSTM(self.lstm_units))(lstm_layer_2)
+        lstm_layer_3 = BatchNormalization()(lstm_layer_3)
+        lstm_layer_3 = Dropout(self.dropout_rate)(lstm_layer_3)
 
-        # Second Bidirectional LSTM layer with ReLU activation
-        model.add(Bidirectional(LSTM(50, return_sequences=True)))
-        model.add(Activation('relu'))
-        model.add(Dropout(self.dropout_rate))
+        # Dense layers
+        dense_layer_1 = Dense(self.dense_units, kernel_regularizer=l2(self.l2_reg))(lstm_layer_3)
+        dense_layer_1 = self.apply_activation(dense_layer_1)
+        dense_layer_1 = Dropout(self.dropout_rate)(dense_layer_1)
 
-        # Third Bidirectional LSTM layer with ReLU activation
-        model.add(Bidirectional(LSTM(25, return_sequences=False)))
-        model.add(Activation('relu'))
-        model.add(Dropout(self.dropout_rate))
+        dense_layer_2 = Dense(self.dense_units, kernel_regularizer=l2(self.l2_reg))(dense_layer_1)
+        dense_layer_2 = self.apply_activation(dense_layer_2)
+        dense_layer_2 = Dropout(self.dropout_rate)(dense_layer_2)
 
         # Output layer
-        model.add(Dense(self.output_layer_dim))
+        output_layer = Dense(self.output_layer_dim, activation='linear')(dense_layer_2)
 
+        model = Model(inputs=input_layer, outputs=output_layer)
         return model
 
 
 # 4. Hybrid Network ------------------------------------------------------------
 class HybridNetwork:
     """
-    Hybrid Network class. This class builds a model with the following architecture:
-    - TCN block with 64 filters and kernel size 3
-    - Transformer-like block with 1 head and key dimension 32
-    - Dense block with 64 units
+        Redesigned Hybrid Network class for EEG signal forecasting.
+        This class builds a model with the following architecture:
+        - TCN block with 64 filters and kernel size 3
+        - Transformer block with 2 heads and key dimension 32
+        - LSTM block for better temporal understanding
+        - Dense block with custom activation and units
+        - Output layer for multi-step ahead predictions
     """
-    def __init__(self, input_shape, output_layer_dim=1):
+    def __init__(self, input_shape, output_layer_dim=10, dropout_rate=0.2, lstm_units=100, dense_units=64, activation='relu'):
         self.input_shape = input_shape
         self.output_layer_dim = output_layer_dim
-
+        self.dropout_rate = dropout_rate
+        self.lstm_units = lstm_units
+        self.dense_units = dense_units
+        self.activation = activation
         self.model = self.build_model()
 
     def build_model(self):
@@ -277,20 +315,33 @@ class HybridNetwork:
 
         # TCN block
         tcn_block = Conv1D(filters=64, kernel_size=3, padding='causal', activation='relu')(input_layer)
+        tcn_block = BatchNormalization()(tcn_block)
+        tcn_block = Dropout(self.dropout_rate)(tcn_block)
         tcn_block = Flatten()(tcn_block)
 
-        # Transformer-like block
-        transformer_block = MultiHeadAttention(num_heads=1, key_dim=32)(input_layer, input_layer, input_layer)
+        # Transformer block
+        transformer_block = MultiHeadAttention(num_heads=2, key_dim=32)(input_layer, input_layer)
         transformer_block = LayerNormalization(epsilon=1e-6)(transformer_block)
+        transformer_block = Dropout(self.dropout_rate)(transformer_block)
+        transformer_block = Flatten()(transformer_block)
 
         # Concatenate TCN and Transformer blocks
-        transformer_block = tf.squeeze(transformer_block, axis=1)
         concatenated = tf.concat([tcn_block, transformer_block], axis=-1)
 
+        # LSTM block
+        lstm_block = LSTM(self.lstm_units, return_sequences=False)(input_layer)
+        lstm_block = BatchNormalization()(lstm_block)
+        lstm_block = Dropout(self.dropout_rate)(lstm_block)
+
+        # Combine all blocks
+        combined = tf.concat([concatenated, lstm_block], axis=-1)
+
         # Dense layers
-        dense_layer = Dense(units=64, activation='relu')(concatenated)
-        output_layer = Dense(self.output_layer_dim)(dense_layer)
+        dense_layer = Dense(units=self.dense_units, activation=self.activation)(combined)
+        dense_layer = Dropout(self.dropout_rate)(dense_layer)
+
+        # Output layer for multi-step ahead forecasting
+        output_layer = Dense(self.output_layer_dim, activation='linear')(dense_layer)
 
         model = Model(inputs=input_layer, outputs=output_layer)
-
         return model
