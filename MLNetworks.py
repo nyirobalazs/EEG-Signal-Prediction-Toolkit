@@ -79,39 +79,96 @@ class CNNLSTMAttentionNetwork:
     - Multi-head attention block with 4 heads and key dimension 32
     - Dense block with 64 units
     """
-    def __init__(self, input_shape, output_layer_dim=1, dropout_rate=0.2, num_heads=4):
+
+    def __init__(self, input_shape, output_layer_dim=1, dropout_rate=0.2, activation='prelu'):
         self.input_shape = input_shape
         self.output_layer_dim = output_layer_dim
         self.dropout_rate = dropout_rate
-        self.num_heads = num_heads
+        self.activation = activation
+        self.model = self.build_model()
 
     def build_model(self):
         input_layer = Input(shape=(self.input_shape[0], self.input_shape[1]))
 
-        # Convolutional block
-        conv_block = Conv1D(filters=128, kernel_size=3, padding='same', activation='relu',
-                            kernel_regularizer=l2(0.001))(input_layer)
-        conv_block = Conv1D(filters=128, kernel_size=3, padding='same', activation='relu',
-                            kernel_regularizer=l2(0.001))(conv_block)
-        conv_block = Dropout(self.dropout_rate)(conv_block)
+        # CNN block
+        cnn_block = Conv1D(filters=64, kernel_size=3, padding='same')(input_layer)
+        if self.activation == 'leaky_relu':
+            cnn_block = LeakyReLU(alpha=0.01)(cnn_block)
+        elif self.activation == 'prelu':
+            cnn_block = PReLU()(cnn_block)
+        elif self.activation == 'elu':
+            cnn_block = ELU(alpha=1.0)(cnn_block)
+        else:
+            cnn_block = Activation(self.activation)(cnn_block)
+        cnn_block = Dropout(self.dropout_rate)(cnn_block)
 
-        # Bidirectional LSTM block
-        lstm_block = Bidirectional(LSTM(200, return_sequences=True, kernel_regularizer=l2(0.001)))(conv_block)
-        lstm_block = Bidirectional(LSTM(200, return_sequences=True, kernel_regularizer=l2(0.001)))(lstm_block)
+        # Flatten the CNN block for concatenation
+        cnn_block_flat = Flatten()(cnn_block)
+
+        # LSTM block
+        lstm_block = LSTM(50, return_sequences=True)(cnn_block)
         lstm_block = Dropout(self.dropout_rate)(lstm_block)
 
         # Attention block
-        attention_block = MultiHeadAttention(num_heads=self.num_heads, key_dim=32)(lstm_block, lstm_block)
-        attention_block = Add()([attention_block, lstm_block])
+        attention_block = MultiHeadAttention(num_heads=1, key_dim=32)(lstm_block, lstm_block, lstm_block)
         attention_block = LayerNormalization(epsilon=1e-6)(attention_block)
 
-        # Dense block
-        dense_block = TimeDistributed(Dense(128, activation='relu'))(attention_block)
-        dense_block = Flatten()(dense_block)
-        output_layer = Dense(self.output_layer_dim)(dense_block)
+        # Flatten the attention block for concatenation
+        attention_block_flat = Flatten()(attention_block)
+
+        # Concatenate Flattened CNN and Flattened Attention blocks
+        concatenated = tf.concat([cnn_block_flat, attention_block_flat], axis=-1)
+
+        # Dense layers
+        dense_layer = Dense(64)(concatenated)
+        if self.activation == 'leaky_relu':
+            dense_layer = LeakyReLU(alpha=0.01)(dense_layer)
+        elif self.activation == 'prelu':
+            dense_layer = PReLU()(dense_layer)
+        elif self.activation == 'elu':
+            dense_layer = ELU(alpha=1.0)(dense_layer)
+        else:
+            dense_layer = Activation(self.activation)(dense_layer)
+        dense_layer = Dropout(self.dropout_rate)(dense_layer)
+        output_layer = Dense(self.output_layer_dim)(dense_layer)
 
         model = Model(inputs=input_layer, outputs=output_layer)
+
         return model
+
+    # def __init__(self, input_shape, output_layer_dim=1, dropout_rate=0.2, num_heads=4):
+    #     self.input_shape = input_shape
+    #     self.output_layer_dim = output_layer_dim
+    #     self.dropout_rate = dropout_rate
+    #     self.num_heads = num_heads
+    #
+    # def build_model(self):
+    #     input_layer = Input(shape=(self.input_shape[0], self.input_shape[1]))
+    #
+    #     # Convolutional block
+    #     conv_block = Conv1D(filters=128, kernel_size=3, padding='same', activation='relu',
+    #                         kernel_regularizer=l2(0.001))(input_layer)
+    #     conv_block = Conv1D(filters=128, kernel_size=3, padding='same', activation='relu',
+    #                         kernel_regularizer=l2(0.001))(conv_block)
+    #     conv_block = Dropout(self.dropout_rate)(conv_block)
+    #
+    #     # Bidirectional LSTM block
+    #     lstm_block = Bidirectional(LSTM(200, return_sequences=True, kernel_regularizer=l2(0.001)))(conv_block)
+    #     lstm_block = Bidirectional(LSTM(200, return_sequences=True, kernel_regularizer=l2(0.001)))(lstm_block)
+    #     lstm_block = Dropout(self.dropout_rate)(lstm_block)
+    #
+    #     # Attention block
+    #     attention_block = MultiHeadAttention(num_heads=self.num_heads, key_dim=32)(lstm_block, lstm_block)
+    #     attention_block = Add()([attention_block, lstm_block])
+    #     attention_block = LayerNormalization(epsilon=1e-6)(attention_block)
+    #
+    #     # Dense block
+    #     dense_block = TimeDistributed(Dense(128, activation='relu'))(attention_block)
+    #     dense_block = Flatten()(dense_block)
+    #     output_layer = Dense(self.output_layer_dim)(dense_block)
+    #
+    #     model = Model(inputs=input_layer, outputs=output_layer)
+    #     return model
 
 
 # 2. LSTM Network --------------------------------------------------------------
