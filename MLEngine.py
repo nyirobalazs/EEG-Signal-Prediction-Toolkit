@@ -43,12 +43,6 @@ TENSORNOARD_LOGS_FOLDER_NAME = 'tensor_boards'
 # ======================================================================
 
 
-def mean_accuracy_within_tolerance(y_true, y_pred):
-    # Calculate the difference between the true and predicted values and check if the difference is within a tolerance
-    y_pred = tf.cast(y_pred, tf.float32)
-    diff = tf.abs(y_true - y_pred)
-    return tf.reduce_mean(tf.cast(tf.less(diff, 0.01), tf.float32))
-
 def configure_memory_growth():
     """
     Configures TensorFlow to allow memory growth for the GPU.
@@ -99,7 +93,7 @@ class MLEngine:
 
     def __init__(self, model, strategy, optimizer='adam',  # Add the strategy parameter
                  loss='mean_absolute_error',
-                 metrics=[mean_accuracy_within_tolerance],
+                 metrics=["mean_accuracy_within_tolerance"],
                  initial_learning_rate=None,
                  decay_steps=None,
                  decay_rate=None,
@@ -110,7 +104,9 @@ class MLEngine:
                  loss_mode='min',
                  reduce_lr_factor=0.1,
                  reduce_lr_patience=50,
-                 min_lr=0.01):
+                 min_lr=0.01,
+                 huber_loss_delta=1.0,
+                 mean_accuracy_within_tolerance=0.01):
         """
         Constructs all the necessary attributes for the MLEngine object.
 
@@ -123,7 +119,7 @@ class MLEngine:
             loss : str, optional
                 the loss function to use during model compilation (default is 'mean_squared_error')
             metrics : list, optional
-                the list of metrics to use during model compilation (default is ['accuracy'])
+                the list of metrics to use during model compilation (default is ['mean_absolute_error_with_tolerance'])
         """
         # Set the policy to 'mixed_float16' for mixed precision training
         policy = mixed_precision.Policy('mixed_float16')
@@ -134,8 +130,8 @@ class MLEngine:
         with self.strategy.scope():
             self.model = model
             self.optimizer = optimizer
-            self.loss = loss
-            self.metrics = metrics
+            self.loss = self.get_loss_functions(loss)
+            self.metrics = self.get_loss_functions(metrics)
             self.initial_learning_rate = initial_learning_rate
             self.decay_steps = decay_steps
             self.decay_rate = decay_rate
@@ -148,6 +144,100 @@ class MLEngine:
             self.reduce_lr_factor = reduce_lr_factor
             self.reduce_lr_patience = reduce_lr_patience
             self.min_lr = min_lr
+            self.huber_loss_delta = huber_loss_delta
+            self.mean_accuracy_within_tolerance = mean_accuracy_within_tolerance
+
+
+
+    # ----------- CUSTOM LOSS FUNCTIONS ----------------
+    def huber_with_smoothness(self, y_true, y_pred):
+        """
+        Calculates the Huber loss with an additional smoothness regularization term.
+
+        The Huber loss is less sensitive to outliers in data than the squared error loss.
+        This function also adds a smoothness regularization term to encourage smooth predictions.
+
+        Parameters:
+        y_true (tf.Tensor): The ground truth values.
+        y_pred (tf.Tensor): The predicted values.
+
+        Returns:
+        tf.Tensor: The combined loss value.
+        """
+        huber_loss = tf.losses.huber(y_true, y_pred, delta=self.huber_loss_delta)
+
+        # Smoothness regularization
+        diff = y_pred[:, 1:] - y_pred[:, :-1]
+        smoothness = tf.reduce_mean(tf.square(diff))
+
+        # Combine the losses
+        loss = huber_loss + 0.01 * smoothness
+        return loss
+
+    def mean_accuracy_within_tolerance(self,y_true, y_pred):
+        """
+        Calculates the mean accuracy within a specified tolerance.
+        :param y_true: ground truth values
+        :param y_pred: predicted values
+        :return: the mean accuracy within the tolerance
+        """
+        y_pred = tf.cast(y_pred, tf.float32)
+        diff = tf.abs(y_true - y_pred)
+        return tf.reduce_mean(tf.cast(tf.less(diff, self.mean_accuracy_within_tolerance), tf.float32))
+
+    def get_loss_functions(self, loss):
+        """
+        Retrieves the appropriate loss functions based on the provided loss names.
+
+        Parameters:
+        :param loss (str or list): A string or list of strings representing the names of the loss functions to retrieve.
+
+        Returns:
+        :return list or function: A list of loss functions if multiple loss names are provided, otherwise a single loss function.
+
+        Raises:
+        ValueError: If a specified loss function name is not defined.
+        """
+        try:
+            loss_functions = []
+
+            if not isinstance(loss, list):
+                loss = [loss]
+
+            for l in loss:
+                if l == 'huber_with_smoothness':
+                    loss_functions.append(self.huber_with_smoothness)
+                elif l == 'mean_accuracy_within_tolerance':
+                    loss_functions.append(self.mean_accuracy_within_tolerance)
+                elif l == 'mean_squared_error':
+                    loss_functions.append(tf.losses.MeanSquaredError())
+                elif l == 'mean_absolute_error':
+                    loss_functions.append(tf.losses.MeanAbsoluteError())
+                elif l == 'mean_absolute_percentage_error':
+                    loss_functions.append(tf.losses.MeanAbsolutePercentageError())
+                elif l == 'mean_squared_logarithmic_error':
+                    loss_functions.append(tf.losses.MeanSquaredLogarithmicError())
+                elif l == 'cosine_similarity':
+                    loss_functions.append(tf.losses.CosineSimilarity())
+                elif l == 'log_cosh':
+                    loss_functions.append(tf.losses.LogCosh())
+                elif l == 'poisson':
+                    loss_functions.append(tf.losses.Poisson())
+                elif l == 'kl_divergence':
+                    loss_functions.append(tf.losses.KLDivergence())
+                elif l == 'hinge':
+                    loss_functions.append(tf.losses.Hinge())
+                else:
+                    logger.error(f"Loss function {l} is not defined.")
+                    raise ValueError(f"Loss function {l} is not defined.")
+
+            if not isinstance(loss, list):
+                return loss_functions[0]
+            else:
+                return loss_functions
+        except Exception as e:
+            logger.error(f"Error in getting the loss functions: {e}")
+            raise
 
 
     def compile_model(self):

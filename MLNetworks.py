@@ -85,8 +85,9 @@ class CNNLSTMAttentionNetwork:
     - Dense block with 64 units
     """
 
-    def __init__(self, input_shape, output_layer_dim=1, dropout_rate=0.2, activation='prelu'):
+    def __init__(self, input_shape, output_layer_dim=1, dropout_rate=0.2, activation='prelu', l2_reg=0.01):
         self.input_shape = input_shape
+        self.l2_reg = l2_reg
         self.output_layer_dim = output_layer_dim
         self.dropout_rate = dropout_rate
         self.activation = activation
@@ -96,8 +97,8 @@ class CNNLSTMAttentionNetwork:
     def build_model(self):
         input_layer = Input(shape=(self.input_shape[0], self.input_shape[1]))
 
-        # CNN block
-        cnn_block = Conv1D(filters=64, kernel_size=3, padding='same')(input_layer)
+        # CNN block with L2 regularization
+        cnn_block = Conv1D(filters=128, kernel_size=3, padding='same', kernel_regularizer=l2(self.l2_reg))(input_layer)
         if self.activation == 'leaky_relu':
             cnn_block = LeakyReLU(alpha=0.01)(cnn_block)
         elif self.activation == 'prelu':
@@ -111,12 +112,12 @@ class CNNLSTMAttentionNetwork:
         # Flatten the CNN block for concatenation
         cnn_block_flat = Flatten()(cnn_block)
 
-        # LSTM block
-        lstm_block = LSTM(50, return_sequences=True)(cnn_block)
+        # Bidirectional LSTM block
+        lstm_block = Bidirectional(LSTM(100, return_sequences=True))(cnn_block)
         lstm_block = Dropout(self.dropout_rate)(lstm_block)
 
         # Attention block
-        attention_block = MultiHeadAttention(num_heads=1, key_dim=32)(lstm_block, lstm_block, lstm_block)
+        attention_block = MultiHeadAttention(num_heads=2, key_dim=64)(lstm_block, lstm_block, lstm_block)
         attention_block = LayerNormalization(epsilon=1e-6)(attention_block)
 
         # Flatten the attention block for concatenation
@@ -125,8 +126,8 @@ class CNNLSTMAttentionNetwork:
         # Concatenate Flattened CNN and Flattened Attention blocks
         concatenated = ConcatenateLayer()([cnn_block_flat, attention_block_flat])
 
-        # Dense layers
-        dense_layer = Dense(64)(concatenated)
+        # Dense layers with L2 regularization
+        dense_layer = Dense(128, kernel_regularizer=l2(self.l2_reg))(concatenated)
         if self.activation == 'leaky_relu':
             dense_layer = LeakyReLU(alpha=0.01)(dense_layer)
         elif self.activation == 'prelu':
@@ -136,7 +137,9 @@ class CNNLSTMAttentionNetwork:
         else:
             dense_layer = Activation(self.activation)(dense_layer)
         dense_layer = Dropout(self.dropout_rate)(dense_layer)
-        output_layer = Dense(self.output_layer_dim)(dense_layer)
+
+        # Output layer with explicit linear activation and L2 regularization
+        output_layer = Dense(self.output_layer_dim, activation='linear', kernel_regularizer=l2(self.l2_reg))(dense_layer)
 
         model = Model(inputs=input_layer, outputs=output_layer)
 

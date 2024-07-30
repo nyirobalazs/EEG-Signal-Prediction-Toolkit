@@ -15,7 +15,7 @@
   "EPOCHS": 2,
   "BATCH_SIZE": 32,
   "REQUIRED_STRUCTURE_NAMES": ["xLeft", "xRight", "trainY"],
-  "LOSS_FUNCTION": "mean_squared_error",
+  "LOSS_FUNCTION": "huber_with_smoothness",
   "INITIAL_LEARNING_RATE": 0.001,
   "DECAY_STEPS": 1000,
   "DECAY_RATE": 0.96,
