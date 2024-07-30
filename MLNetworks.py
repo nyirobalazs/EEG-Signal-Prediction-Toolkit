@@ -162,10 +162,12 @@ class LSTMNetwork:
     - LSTM layer with 50 units
     """
 
-    def __init__(self, input_shape, output_layer_dim=1, dropout_rate=0.2, lstm_units=100, dense_units=64, activation='elu', l2_reg=0.01):
+    def __init__(self, input_shape, dropout_rate, output_layer_dim,
+                 lstm_units=64, dense_units=32,
+                 activation='relu', l2_reg=0.01):
         self.input_shape = input_shape
         self.output_layer_dim = output_layer_dim
-        self.dropout_rate = dropout_rate
+        self.dropout_rate = dropout_rate  # This should be a float, e.g., 0.2
         self.lstm_units = lstm_units
         self.dense_units = dense_units
         self.activation = activation
@@ -185,8 +187,10 @@ class LSTMNetwork:
             dense_layer_sigmoid = Dense(self.dense_units, kernel_regularizer=l2(self.l2_reg))(dense_layer)
             dense_layer_sigmoid = Activation('sigmoid')(dense_layer_sigmoid)
             return Multiply()([dense_layer_tanh, dense_layer_sigmoid])
-        else:
+        elif self.activation in ['relu', 'sigmoid', 'tanh', 'softmax']:  # List common activations
             return Activation(self.activation)(dense_layer)
+        else:
+            raise ValueError(f"Unsupported activation function: {self.activation}")
 
     def build_model(self):
         input_layer = Input(shape=self.input_shape)
@@ -225,13 +229,15 @@ class LSTMNetwork:
 class BidirectionalLSTMNetwork:
     """
     Bidirectional LSTM Network class. This class builds a model with the following architecture:
-    - Bidirectional LSTM layer with 100 units (twice)
-    - Bidirectional LSTM layer with 100
-
+    - Bidirectional LSTM layer with 100 units (three times)
     """
-    def __init__(self, input_shape, output_layer_dim=1, dropout_rate=0.2, lstm_units=100, dense_units=64, activation='relu', l2_reg=0.01):
+
+    def __init__(self, input_shape, dropout_rate, output_layer_dim,
+                 lstm_units=64, dense_units=32,
+                 activation='relu', l2_reg=0.01):
         self.input_shape = input_shape
         self.output_layer_dim = output_layer_dim
+        # Assign dropout_rate to self
         self.dropout_rate = dropout_rate
         self.lstm_units = lstm_units
         self.dense_units = dense_units
@@ -326,7 +332,7 @@ class HybridNetwork:
         transformer_block = Flatten()(transformer_block)
 
         # Concatenate TCN and Transformer blocks
-        concatenated = tf.concat([tcn_block, transformer_block], axis=-1)
+        concatenated = tf.keras.layers.Concatenate()([tcn_block, transformer_block])
 
         # LSTM block
         lstm_block = LSTM(self.lstm_units, return_sequences=False)(input_layer)
@@ -334,7 +340,7 @@ class HybridNetwork:
         lstm_block = Dropout(self.dropout_rate)(lstm_block)
 
         # Combine all blocks
-        combined = tf.concat([concatenated, lstm_block], axis=-1)
+        combined = tf.keras.layers.Concatenate(axis=-1)([concatenated, lstm_block])
 
         # Dense layers
         dense_layer = Dense(units=self.dense_units, activation=self.activation)(combined)
