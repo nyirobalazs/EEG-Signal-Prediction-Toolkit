@@ -36,7 +36,7 @@ logger = Logger(__name__, code_file_name="MLEngine.py")
 
 # Permanent variables
 MODEL_CHECKPOINT_FOLDER_NAME = 'models'
-MODEL_CHECKPOINT_FORMAT = 'h5'
+MODEL_CHECKPOINT_FORMAT = 'keras'
 LOGS_FOLDER_NAME = 'logs'
 TENSORNOARD_LOGS_FOLDER_NAME = 'tensor_boards'
 
